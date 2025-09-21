@@ -1,10 +1,10 @@
 "use client";
 
-// app/daily/page.tsx — Daily Tasks (toggle + dedupe fix)
-// - Toggle on/off per task (XP/progress go up/down)
-// - DEDUPES completed[] on load and on every write (prevents ghost XP)
-// - Daily reset at local midnight
-// - Streak increments only at day rollover if ALL tasks were done yesterday
+// app/daily/page.tsx — Daily Tasks (toggle + derived XP)
+// - Toggle on/off per task (Undo supported)
+// - XP & progress are FULLY DERIVED from completed[] (never stored/incremented)
+// - Dedupe on load and every save to prevent ghost entries
+// - Daily reset at local midnight; streak updates on rollover if all tasks were done
 // - Tailwind CSS styles
 
 import { useEffect, useMemo, useState } from "react";
@@ -38,6 +38,9 @@ const ALL_TASKS: Task[] = [
 ];
 const CATEGORIES: Task["category"][] = ["Nutrition", "Exercise", "Lifestyle"];
 
+// XP config
+const POINTS_PER_TASK = 10; // adjust freely; progress scales with this
+
 // Storage keys
 const STORAGE_KEY = "dailyTasks_state_v1"; // { date: "YYYY-MM-DD", completed: string[] }
 const STREAK_KEY = "dailyTasks_streak_v1"; // { lastDate: string|null, streak: number }
@@ -49,9 +52,7 @@ function todayLocal(): string {
   const tzAdjusted = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
   return fmtDate(tzAdjusted);
 }
-function dedupe(arr: string[]): string[] {
-  return Array.from(new Set(arr));
-}
+function dedupe(arr: string[]): string[] { return Array.from(new Set(arr)); }
 function loadState(): { date: string; completed: string[] } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -59,9 +60,7 @@ function loadState(): { date: string; completed: string[] } {
     const parsed = JSON.parse(raw);
     const date = typeof parsed?.date === "string" ? parsed.date : todayLocal();
     const list = Array.isArray(parsed?.completed) ? parsed.completed : [];
-    // ✅ DEDUPE on load
     const unique = dedupe(list);
-    // Write-back normalized shape to avoid future drift
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ date, completed: unique }));
     return { date, completed: unique };
   } catch {
@@ -69,7 +68,6 @@ function loadState(): { date: string; completed: string[] } {
   }
 }
 function saveState(state: { date: string; completed: string[] }) {
-  // ✅ DEDUPE on every write
   const next = { date: state.date, completed: dedupe(state.completed) };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
 }
@@ -83,14 +81,9 @@ function loadStreak(): { lastDate: string | null; streak: number } {
     return { lastDate: null, streak: 0 };
   }
 }
-function saveStreak(s: { lastDate: string | null; streak: number }) {
-  localStorage.setItem(STREAK_KEY, JSON.stringify(s));
-}
+function saveStreak(s: { lastDate: string | null; streak: number }) { localStorage.setItem(STREAK_KEY, JSON.stringify(s)); }
 function groupTasks(tasks: Task[]): TasksByCategory {
-  return tasks.reduce((acc, t) => {
-    (acc[t.category] ||= []).push(t);
-    return acc;
-  }, {} as TasksByCategory);
+  return tasks.reduce((acc, t) => { (acc[t.category] ||= []).push(t); return acc; }, {} as TasksByCategory);
 }
 function daysBetweenISO(a: string, b: string): number {
   const da = new Date(a + "T00:00:00");
@@ -105,6 +98,10 @@ export default function Page() {
 
   // Init + daily rollover / streak
   useEffect(() => {
+    // Clean up any legacy XP keys if you had them
+    localStorage.removeItem("xp");
+    localStorage.removeItem("totalXp");
+
     const t = todayLocal();
     const s = loadState();
     if (s.date !== t) {
@@ -139,21 +136,21 @@ export default function Page() {
     }
   }, []);
 
-  // Derived
+  // Derived (pure) — XP/progress are computed from completed[], never stored
   const grouped = useMemo(() => groupTasks(ALL_TASKS), []);
-  const total = ALL_TASKS.length;
+  const totalTasks = ALL_TASKS.length;
   const completedCount = state ? state.completed.length : 0;
-  const progress = total ? Math.round((completedCount / total) * 100) : 0;
+  const xp = completedCount * POINTS_PER_TASK;
+  const maxXp = totalTasks * POINTS_PER_TASK;
+  const progress = maxXp ? Math.round((xp / maxXp) * 100) : 0;
 
   // Toggle on/off a task — ALWAYS dedupes the list
   function toggleTask(taskId: string) {
     if (!state) return;
     const isDone = state.completed.includes(taskId);
-
-    // Remove all occurrences if present; otherwise add once
     const nextCompleted = isDone
-      ? state.completed.filter((id) => id !== taskId)
-      : [...state.completed, taskId];
+      ? state.completed.filter((id) => id !== taskId) // remove → XP down
+      : [...state.completed, taskId];                 // add → XP up
 
     const next = { ...state, completed: dedupe(nextCompleted) };
     saveState(next);
@@ -178,15 +175,15 @@ export default function Page() {
         <StreakBadge streak={streak.streak} />
       </div>
 
-      {/* Progress Bar */}
-      <div className="w-full bg-gray-100 rounded-full h-3 mb-6">
+      {/* Progress / XP */}
+      <div className="w-full bg-gray-100 rounded-full h-3 mb-2">
         <div
           className="h-3 rounded-full transition-all"
           style={{ width: `${progress}%`, background: `linear-gradient(90deg, rgba(59,130,246,1), rgba(16,185,129,1))` }}
           aria-label={`Progress ${progress}%`}
         />
       </div>
-      <div className="text-sm text-gray-600 mb-6">{completedCount}/{total} completed today</div>
+      <div className="text-xs text-gray-600 mb-6">XP: {xp}/{maxXp} • {completedCount}/{totalTasks} tasks</div>
 
       {/* Categories */}
       <div className="space-y-6">
