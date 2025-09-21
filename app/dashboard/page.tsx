@@ -11,6 +11,14 @@ const habits = [
   { key: "balance", name: "Balance Exercise", xp: 10, fact: "Balance training lowers fall risk by 30%." }
 ];
 
+// Badge rules
+const badgeRules = [
+  { key: "boneBuilder", label: "Bone Builder", condition: (streak: number) => streak >= 7 },
+  { key: "strongWalker", label: "Strong Walker", condition: (_: number, challenges: any) => (challenges.walk || 0) >= 300 }, // 30 walks = 300 min
+  { key: "sunSeeker", label: "Sun Seeker", condition: (_: number, challenges: any) => (challenges.sunlight || 0) >= 10 },
+  { key: "balanceMaster", label: "Balance Master", condition: (_: number, challenges: any) => (challenges.balance || 0) >= 15 },
+];
+
 export default function Dashboard() {
   const router = useRouter();
   const [completed, setCompleted] = useState<boolean[]>(Array(habits.length).fill(false));
@@ -18,17 +26,36 @@ export default function Dashboard() {
   const [streak, setStreak] = useState(0);
   const [message, setMessage] = useState("");
   const [profile, setProfile] = useState<{ name?: string; age?: string; condition?: string }>({});
+  const [challenges, setChallenges] = useState<any>({});
+  const [badges, setBadges] = useState<{ [key: string]: boolean }>({});
 
-  // Load profile + progress
+  // Load profile + saved progress
   useEffect(() => {
     const savedProfile = localStorage.getItem("profile");
     if (savedProfile) setProfile(JSON.parse(savedProfile));
 
     const savedXP = localStorage.getItem("xp");
     const savedStreak = localStorage.getItem("streak");
+    const savedChallenges = JSON.parse(localStorage.getItem("challenges") || "{}");
+    const savedBadges = JSON.parse(localStorage.getItem("badges") || "{}");
+
     if (savedXP) setXp(parseInt(savedXP, 10));
     if (savedStreak) setStreak(parseInt(savedStreak, 10));
+    setChallenges(savedChallenges);
+    setBadges(savedBadges);
   }, []);
+
+  // Check badge unlocks
+  useEffect(() => {
+    const newBadges: { [key: string]: boolean } = { ...badges };
+    badgeRules.forEach(rule => {
+      if (rule.condition(streak, challenges)) {
+        newBadges[rule.key] = true;
+      }
+    });
+    setBadges(newBadges);
+    localStorage.setItem("badges", JSON.stringify(newBadges));
+  }, [streak, challenges]);
 
   const toggleHabit = (i: number) => {
     const newCompleted = [...completed];
@@ -51,13 +78,14 @@ export default function Dashboard() {
   };
 
   const updateChallengeProgress = (habitKey: string) => {
-    const challenges = JSON.parse(localStorage.getItem("challenges") || "{}");
+    const newChallenges = { ...challenges };
 
-    if (habitKey === "walk") challenges.walk = (challenges.walk || 0) + 10;
-    if (habitKey === "sunlight") challenges.sunlight = (challenges.sunlight || 0) + 1;
-    if (habitKey === "balance") challenges.balance = (challenges.balance || 0) + 1;
+    if (habitKey === "walk") newChallenges.walk = (newChallenges.walk || 0) + 10;
+    if (habitKey === "sunlight") newChallenges.sunlight = (newChallenges.sunlight || 0) + 1;
+    if (habitKey === "balance") newChallenges.balance = (newChallenges.balance || 0) + 1;
 
-    localStorage.setItem("challenges", JSON.stringify(challenges));
+    setChallenges(newChallenges);
+    localStorage.setItem("challenges", JSON.stringify(newChallenges));
   };
 
   return (
@@ -68,9 +96,7 @@ export default function Dashboard() {
           <h1>Welcome back, {profile.name} 👋</h1>
           <p><strong>Age:</strong> {profile.age}</p>
           <p><strong>Focus:</strong> {profile.condition}</p>
-          <p style={styles.encourage}>
-            Let’s keep your bones strong today!
-          </p>
+          <p style={styles.encourage}>Let’s keep your bones strong today!</p>
           <button style={styles.editButton} onClick={() => router.push('/profile')}>
             Edit Profile
           </button>
@@ -116,6 +142,23 @@ export default function Dashboard() {
           🎉 Amazing! You completed all your habits today. Stronger bones incoming!
         </div>
       )}
+
+      {/* Badge Section */}
+      <h2 style={styles.subtitle}>My Badges</h2>
+      <div style={styles.badgesBox}>
+        {badgeRules.map(badge => (
+          <div
+            key={badge.key}
+            style={{
+              ...styles.badge,
+              background: badges[badge.key] ? "#ffe680" : "#ddd",
+              color: badges[badge.key] ? "#000" : "#777",
+            }}
+          >
+            {badge.label}
+          </div>
+        ))}
+      </div>
     </main>
   );
 }
@@ -132,92 +175,18 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
 
 // Styles
 const styles: { [key: string]: React.CSSProperties } = {
-  page: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: "2rem",
-    background: "#f9f9f9",
-    minHeight: "100vh",
-    fontSize: "1.2rem",
-  },
-  profileBox: {
-    background: "#fff",
-    padding: "1.5rem",
-    borderRadius: "12px",
-    border: "2px solid #ddd",
-    marginBottom: "2rem",
-    textAlign: "center",
-    maxWidth: "500px",
-    width: "100%",
-  },
-  encourage: {
-    marginTop: "1rem",
-    fontSize: "1.2rem",
-    fontWeight: "bold",
-    color: "#2d6a2d",
-  },
-  editButton: {
-    marginTop: "1rem",
-    padding: "0.6rem 1.2rem",
-    borderRadius: "8px",
-    border: "none",
-    background: "#0070f3",
-    color: "#fff",
-    cursor: "pointer",
-    fontSize: "1rem",
-  },
+  page: { display: "flex", flexDirection: "column", alignItems: "center", padding: "2rem", background: "#f9f9f9", minHeight: "100vh" },
+  profileBox: { background: "#fff", padding: "1.5rem", borderRadius: "12px", border: "2px solid #ddd", marginBottom: "2rem", textAlign: "center", maxWidth: "500px", width: "100%" },
+  encourage: { marginTop: "1rem", fontSize: "1.2rem", fontWeight: "bold", color: "#2d6a2d" },
+  editButton: { marginTop: "1rem", padding: "0.6rem 1.2rem", borderRadius: "8px", border: "none", background: "#0070f3", color: "#fff", cursor: "pointer", fontSize: "1rem" },
   subtitle: { fontSize: "1.5rem", marginTop: "2rem", marginBottom: "1rem" },
   list: { listStyle: "none", padding: 0 },
-  button: {
-    fontSize: "1.2rem",
-    padding: "0.8rem 1.2rem",
-    borderRadius: "12px",
-    border: "2px solid #333",
-    cursor: "pointer",
-    width: "260px",
-  },
-  statsBox: {
-    textAlign: "center",
-    marginBottom: "2rem",
-    background: "#fff",
-    padding: "1rem 2rem",
-    borderRadius: "12px",
-    border: "2px solid #ddd",
-  },
-  factBox: {
-    marginTop: "1.5rem",
-    padding: "1rem",
-    border: "2px solid #4CAF50",
-    borderRadius: "12px",
-    background: "#eaffea",
-    color: "#2d6a2d",
-    fontWeight: "bold",
-    maxWidth: "400px",
-    textAlign: "center",
-  },
-  summaryBox: {
-    marginTop: "2rem",
-    padding: "1rem",
-    border: "2px solid #333",
-    borderRadius: "12px",
-    background: "#ffe680",
-    fontWeight: "bold",
-    textAlign: "center",
-    maxWidth: "400px",
-  },
-  progressContainer: {
-    width: "100%",
-    height: "25px",
-    background: "#ddd",
-    borderRadius: "12px",
-    overflow: "hidden",
-    margin: "0.5rem 0",
-  },
-  progressFill: {
-    height: "100%",
-    background: "#4CAF50",
-    borderRadius: "12px",
-    transition: "width 0.4s ease",
-  },
+  button: { fontSize: "1.2rem", padding: "0.8rem 1.2rem", borderRadius: "12px", border: "2px solid #333", cursor: "pointer", width: "260px" },
+  statsBox: { textAlign: "center", marginBottom: "2rem", background: "#fff", padding: "1rem 2rem", borderRadius: "12px", border: "2px solid #ddd" },
+  factBox: { marginTop: "1.5rem", padding: "1rem", border: "2px solid #4CAF50", borderRadius: "12px", background: "#eaffea", color: "#2d6a2d", fontWeight: "bold", maxWidth: "400px", textAlign: "center" },
+  summaryBox: { marginTop: "2rem", padding: "1rem", border: "2px solid #333", borderRadius: "12px", background: "#ffe680", fontWeight: "bold", textAlign: "center", maxWidth: "400px" },
+  progressContainer: { width: "100%", height: "25px", background: "#ddd", borderRadius: "12px", overflow: "hidden", margin: "0.5rem 0" },
+  progressFill: { height: "100%", background: "#4CAF50", borderRadius: "12px", transition: "width 0.4s ease" },
+  badgesBox: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginTop: "1rem" },
+  badge: { padding: "1rem", borderRadius: "12px", textAlign: "center", fontWeight: "bold", fontSize: "1.1rem" },
 };
