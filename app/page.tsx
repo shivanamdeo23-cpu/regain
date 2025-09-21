@@ -24,7 +24,8 @@ export default function Home() {
         </ul>
       </section>
 
-      <button style={styles.button} onClick={() => router.push('/dashboard')}>
+      {/* ✅ Changed: goes to /profile instead of /dashboard */}
+      <button style={styles.button} onClick={() => router.push('/profile')}>
         Create Profile / Log In
       </button>
 
