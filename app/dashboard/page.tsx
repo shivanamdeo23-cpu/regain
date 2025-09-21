@@ -179,4 +179,75 @@ export default function Dashboard() {
         <p><strong>Today’s XP:</strong> {todaysXp} / {TOTAL_TODAY_XP}</p>
         <ProgressBar value={todaysXp} max={TOTAL_TODAY_XP} />
         <p>Streak: {streak} day{streak === 1 ? '' : 's'}</p>
-        <p style={s
+        <p style={styles.helperText}>Undoing a habit will reduce today’s XP (derived from completed habits).</p>
+        {/* Optional: show lifetime XP separately if you still want it */}
+        <p style={{ marginTop: 8, color: '#666' }}>Lifetime XP: {lifetimeXp}</p>
+      </div>
+
+      {/* Today’s Habits */}
+      <h2 style={styles.subtitle}>Today’s Habits ({today})</h2>
+      <ul style={styles.list}>
+        {HABITS.map((h) => {
+          const done = completedTodayKeys.includes(h.key);
+          return (
+            <li key={h.key} style={{ marginBottom: '1rem' }}>
+              <button
+                onClick={() => toggleHabit(h.key)}
+                style={{
+                  ...styles.habitButton,
+                  background: done ? '#4CAF50' : '#fff',
+                  color: done ? '#fff' : '#000',
+                }}
+              >
+                {done ? `✓ ${h.name}` : h.name}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Motivational / Evidence “Why” */}
+      {message && <div style={styles.factBox}>{message}</div>}
+
+      {/* Celebration when all complete */}
+      {allHabitsCompletedToday && (
+        <div style={styles.summaryBox}>
+          Brilliant! You’ve completed all habits today. Your bones will thank you.
+        </div>
+      )}
+    </main>
+  );
+}
+
+// ---- Reusable progress bar ----
+function ProgressBar({ value, max }: { value: number; max: number }) {
+  const pct = Math.min((value / max) * 100, 100);
+  return (
+    <div style={styles.progressOuter}>
+      <div style={{ ...styles.progressInner, width: `${pct}%` }} />
+    </div>
+  );
+}
+
+// ---- Styles ----
+const styles: { [k: string]: React.CSSProperties } = {
+  page: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem', background: '#f9f9f9', minHeight: '100vh', fontSize: '1.15rem' },
+  title: { fontSize: '2rem', marginBottom: '1.5rem' },
+  profileBox: { background: '#fff', padding: '1.5rem', borderRadius: 12, border: '2px solid #ddd', marginBottom: '2rem', textAlign: 'center', maxWidth: 520, width: '100%' },
+  encourage: { marginTop: '0.75rem', fontWeight: 600, color: '#2d6a2d' },
+  editButton: { marginTop: '1rem', padding: '0.6rem 1.2rem', borderRadius: 8, border: 'none', background: '#0070f3', color: '#fff', cursor: 'pointer', fontSize: '1rem' },
+
+  statsBox: { textAlign: 'center', marginBottom: '2rem', background: '#fff', padding: '1rem 2rem', borderRadius: 12, border: '2px solid #ddd', width: '100%', maxWidth: 520 },
+  helperText: { marginTop: '0.5rem', color: '#555', fontSize: '0.95rem' },
+
+  subtitle: { fontSize: '1.5rem', marginTop: '1rem', marginBottom: '1rem' },
+  list: { listStyle: 'none', padding: 0 },
+
+  habitButton: { fontSize: '1.2rem', padding: '0.8rem 1.2rem', borderRadius: 12, border: '2px solid #333', cursor: 'pointer', width: 280, textAlign: 'center' },
+
+  factBox: { marginTop: '1.5rem', padding: '1rem', border: '2px solid #4CAF50', borderRadius: 12, background: '#eaffea', color: '#2d6a2d', fontWeight: 600, maxWidth: 520, textAlign: 'center' },
+  summaryBox: { marginTop: '1.5rem', padding: '1rem', border: '2px solid #333', borderRadius: 12, background: '#ffe680', fontWeight: 700, textAlign: 'center', maxWidth: 520 },
+
+  progressOuter: { width: '100%', maxWidth: 520, height: 24, background: '#e2e2e2', borderRadius: 12, overflow: 'hidden', marginTop: 6, marginBottom: 6 },
+  progressInner: { height: '100%', background: '#4CAF50', transition: 'width 0.35s ease' },
+};
