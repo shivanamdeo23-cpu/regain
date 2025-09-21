@@ -2,5 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-/* custom resets or styles can go here */
+/* App look & feel */
 html, body { height: 100%; }
+body {
+  @apply bg-ink text-white antialiased;
+  background: radial-gradient(1200px 800px at 10% -10%, #1f2937 0%, #0b1220 60%, #050a16 100%);
+}
+
+/* Reusable UI tokens mapped to Tailwind primitives */
+@layer components {
+  .h1 { @apply text-4xl md:text-5xl font-extrabold leading-tight; }
+  .h2 { @apply text-2xl md:text-3xl font-semibold; }
+  .h3 { @apply text-xl font-semibold; }
+  .muted { @apply text-white/70; }
+
+  .badge { @apply inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-sm; }
+
+  .btn-primary { @apply inline-flex items-center justify-center rounded-xl px-4 py-2 bg-white text-ink font-medium hover:bg-white/90 transition; }
+  .btn-ghost { @apply inline-flex items-center justify-center rounded-xl px-4 py-2 border border-white/20 hover:border-white/40 text-white/90; }
+
+  .card { @apply rounded-2xl bg-white/5 border border-white/10 backdrop-blur; }
+}
+
+/* Optional container spacing for your page wrapper */
+.app-shell { @apply max-w-5xl mx-auto px-4 py-10; }
