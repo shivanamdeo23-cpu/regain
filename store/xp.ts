@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import { todayKey } from '@/lib/date';
+import { todayKey } from '../lib/date';
 
 export type Habit = { key: string; name: string; xp: number; fact?: string };
 export type Completion = { date: string; habitKey: string };
