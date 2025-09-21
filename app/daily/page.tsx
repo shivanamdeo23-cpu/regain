@@ -1,5 +1,41 @@
 "use client";
 
+// ULTRA‑MINIMAL DEBUG: one task, no styling magic, no storage, no streaks.
+// If XP/progress don't go down here, the issue is outside this component
+// (e.g., old build, different page rendering, or a second progress bar elsewhere).
+
+import { useState } from "react";
+
+export default function Page() {
+  const [done, setDone] = useState(false);
+  const POINTS_PER_TASK = 10;
+  const xp = (done ? 1 : 0) * POINTS_PER_TASK; // derived
+  const maxXp = 1 * POINTS_PER_TASK;
+  const progress = Math.round((xp / maxXp) * 100);
+
+  return (
+    <div style={{ maxWidth: 520, margin: "24px auto", padding: 16, fontFamily: "ui-sans-serif, system-ui" }}>
+      <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Daily Tasks — Ultra Minimal Debug</h1>
+
+      <div style={{ marginBottom: 8 }}>XP: <b>{xp}</b> / {maxXp} &nbsp;|&nbsp; Progress: <b>{progress}%</b></div>
+      <div style={{ height: 10, background: "#eee", borderRadius: 6, overflow: "hidden", marginBottom: 16 }}>
+        <div style={{ height: 10, width: `${progress}%`, background: "#4a9" }} />
+      </div>
+
+      <button
+        onClick={() => setDone(v => !v)}
+        style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #999", background: done ? "#f3f4f6" : "#e0ecff" }}
+      >
+        {done ? "Undo Calcium" : "Mark Calcium Done"}
+      </button>
+
+      <pre style={{ marginTop: 16, fontSize: 12, color: "#555", background: "#fafafa", padding: 12, borderRadius: 8 }}>
+        {JSON.stringify({ done, xp, progress }, null, 2)}
+      </pre>
+    </div>
+  );
+}
+
 // app/daily/page.tsx — FINAL (Simple, toggle, derived XP, no localStorage)
 // This version avoids storage entirely so progress ALWAYS goes up/down on toggle.
 // Once confirmed working, we can add persistence back.
