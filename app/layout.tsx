@@ -8,7 +8,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <header className="sticky top-0 z-50 border-b border-white/10 backdrop-blur bg-[var(--bg)]/70">
           <div className="container flex h-14 items-center justify-between">
-            <Link href="/" className="font-semibold">BoneHealth</Link>
+            <Link href="/" className="font-semibold">Regain</Link>
             <nav className="flex items-center gap-2">
               <Link className="btn-ghost" href="/profile">Profile</Link>
               <Link className="btn-primary" href="/dashboard">Dashboard</Link>
