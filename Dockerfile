@@ -1,33 +1,42 @@
-# Use official Node.js LTS on Alpine
-FROM node:20-alpine AS build
+# ------------------------
+# Builder
+# ------------------------
+FROM node:20-alpine AS builder
 
-# Create app directory
 WORKDIR /app
 
-# Copy package.json and optionally package-lock.json (ignore if missing)
-COPY package*.json ./
+# Install deps required for native builds (sharp, etc.)
+RUN apk add --no-cache libc6-compat python3 make g++
 
-# Install dependencies (omit dev for smaller image)
-RUN npm install --omit=dev
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Install deps
+COPY package*.json ./
+RUN npm install
 
 # Copy source
 COPY . .
 
-# Build Next.js
+# Build Next.js app
 RUN npm run build
 
-# Production image
+# ------------------------
+# Runner
+# ------------------------
 FROM node:20-alpine AS runner
+
 WORKDIR /app
 
-# Copy only necessary output
-COPY --from=build /app/package*.json ./
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/public ./public
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Expose the port Next.js runs on
+# Copy only the compiled output + production deps
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.js ./next.config.js
+
 EXPOSE 3000
 
-# Run Next.js in production
 CMD ["npm", "start"]
