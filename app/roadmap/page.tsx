@@ -3,136 +3,129 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useI18n } from '@/app/providers/TranslationProvider';
 
-/* ---------- tiny helpers (SSR-safe) ---------- */
+/* ---- SSR-safe helpers ---- */
 const isBrowser = typeof window !== 'undefined';
 const isoDay = (d = new Date()) =>
-  `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-const STORAGE_PREFIX = 'bonehub:day:';
-const kDay = (dateStr: string) => `${STORAGE_PREFIX}${dateStr}`;
-const dateOffset = (baseISO: string, days: number) => {
-  const d = new Date(baseISO + 'T00:00:00');
-  d.setDate(d.getDate() + days);
-  return isoDay(d);
-};
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const STORAGE_PREFIX = 'bonehub:day:'; const kDay = (d: string) => `${STORAGE_PREFIX}${d}`;
+const dateOffset = (baseISO: string, days: number) => { const dt = new Date(baseISO + 'T00:00:00'); dt.setDate(dt.getDate() + days); return isoDay(dt); };
 type DayState = { date: string; tasks: Record<string, boolean> };
-const loadDay = (dateStr: string): DayState | null => {
-  if (!isBrowser) return null;
-  try { const raw = localStorage.getItem(kDay(dateStr)); return raw ? JSON.parse(raw) as DayState : null; } catch { return null; }
-};
+const loadDay = (d: string): DayState | null => { if (!isBrowser) return null; try { const raw = localStorage.getItem(kDay(d)); return raw ? JSON.parse(raw) : null; } catch { return null; } };
 
-/* ---------- simple progress bar ---------- */
-function ProgressBar({ value, max }: { value: number; max: number }) {
-  const pct = Math.max(0, Math.min(100, Math.round((value / max) * 100)));
+/* ---- UI ---- */
+const Bar = ({ value, max, showPct = false }: { value: number; max: number; showPct?: boolean }) => {
+  const pct = Math.max(0, Math.min(100, Math.round(((value || 0) / max) * 100)));
   return (
-    <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-      <div className="h-full bg-indigo-600 transition-all" style={{ width: `${pct}%` }} />
+    <div className="w-full">
+      {showPct && <div className="text-xs mb-1 text-gray-400">{pct}%</div>}
+      <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
+        <div className="h-full bg-indigo-500 transition-all" style={{ width: `${pct}%` }} />
+      </div>
     </div>
   );
-}
+};
 
-/* ---------- projection model (simple + tweakable) ---------- */
-type TaskWeight = { key: string; weight: number; label: string };
+/* ---- model ---- */
+type TaskKey = 'calcium' | 'vitd' | 'protein' | 'walk10' | 'hydrate2l';
+type TaskWeight = { key: TaskKey; weight: number };
 const TASKS: TaskWeight[] = [
-  { key: 'calcium',   weight: 1.0, label: 'Calcium' },
-  { key: 'vitd',      weight: 0.8, label: 'Vitamin D' },
-  { key: 'protein',   weight: 0.6, label: 'Protein' },
-  { key: 'walk10',    weight: 0.7, label: 'Walk' },
-  { key: 'hydrate2l', weight: 0.2, label: 'Hydration' },
+  { key: 'calcium', weight: 1.0 },
+  { key: 'vitd', weight: 0.8 },
+  { key: 'protein', weight: 0.6 },
+  { key: 'walk10', weight: 0.7 },
+  { key: 'hydrate2l', weight: 0.2 },
 ];
-const BASE_SCORE = 50;
-const MAX_SCORE = 100;
-const MONTHLY_GAIN_AT_100_ADHERENCE = 8;
+const BASE_SCORE = 50, MAX_SCORE = 100, MONTHLY_GAIN_AT_100 = 8;
 
 export default function RoadmapPage() {
+  const { t } = useI18n();
   const today = isoDay();
   const [hydrated, setHydrated] = useState(false);
-
   useEffect(() => { if (isBrowser) setHydrated(true); }, []);
 
-  // Compute weighted adherence over last 28 days
   const { adherencePct, byTask } = useMemo(() => {
-    if (!hydrated) return { adherencePct: 0, byTask: {} as Record<string, number> };
-
+    if (!hydrated) return { adherencePct: 0, byTask: {} as Record<TaskKey, number> };
     const days = 28;
-    const counts: Record<string, number> = Object.fromEntries(TASKS.map(t => [t.key, 0]));
+    const counts: Record<TaskKey, number> = { calcium: 0, vitd: 0, protein: 0, walk10: 0, hydrate2l: 0 };
     for (let i = 0; i < days; i++) {
       const dISO = dateOffset(today, -i);
       const ds = loadDay(dISO);
       if (!ds) continue;
-      for (const t of TASKS) if (ds.tasks?.[t.key]) counts[t.key] += 1;
+      (Object.keys(counts) as TaskKey[]).forEach(k => { if (ds.tasks?.[k]) counts[k] += 1; });
     }
-
-    const totalWeight = TASKS.reduce((s, t) => s + t.weight, 0);
-    const weighted = TASKS.reduce((s, t) => s + (counts[t.key] / days) * t.weight, 0);
-    const adherence = totalWeight ? (weighted / totalWeight) : 0;
-
-    const perTaskRate: Record<string, number> = {};
-    TASKS.forEach(t => { perTaskRate[t.key] = counts[t.key] / days; });
-
-    return { adherencePct: Math.round(adherence * 100), byTask: perTaskRate };
+    const tw = TASKS.reduce((s, x) => s + x.weight, 0);
+    const weighted = TASKS.reduce((s, x) => s + (counts[x.key] / days) * x.weight, 0);
+    const adh = tw ? weighted / tw : 0;
+    const per: Record<TaskKey, number> = { calcium: 0, vitd: 0, protein: 0, walk10: 0, hydrate2l: 0 };
+    (Object.keys(per) as TaskKey[]).forEach(k => (per[k] = counts[k] / days));
+    return { adherencePct: Math.round(adh * 100), byTask: per };
   }, [hydrated, today]);
 
-  const project = (months: number) =>
-    Math.min(MAX_SCORE, Math.round(BASE_SCORE + months * MONTHLY_GAIN_AT_100_ADHERENCE * (adherencePct / 100)));
+  const project = (m: number) =>
+    Math.min(MAX_SCORE, Math.round(BASE_SCORE + m * MONTHLY_GAIN_AT_100 * (adherencePct / 100)));
 
   const cards = [
-    { label: 'In 1 month',  score: project(1), copy: 'Consistent habits begin to raise your baseline.' },
-    { label: 'In 2 months', score: project(2), copy: 'Adaptations compound with steady effort.' },
-    { label: 'In 3 months', score: project(3), copy: 'Meaningful improvement — keep the streak alive.' },
+    { label: t('common.in1'), score: project(1), copy: t('roadmap.consistent') },
+    { label: t('common.in2'), score: project(2), copy: t('roadmap.compound') },
+    { label: t('common.in3'), score: project(3), copy: t('roadmap.meaningful') },
   ];
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6 space-y-6">
       <header className="space-y-1">
-        <h1 className="text-2xl font-bold">Your Roadmap</h1>
-        <p className="text-sm text-gray-600">Projections use your last 28 days of completion.</p>
+        <h1 className="text-2xl font-bold">{t('common.roadmap')}</h1>
+        <p className="text-sm text-gray-400">{t('common.roadmapTag')}</p>
       </header>
 
-      <section className="rounded-2xl border border-gray-200 p-4 bg-white space-y-3">
+      <section className="rounded-2xl border border-gray-800 p-4 bg-gray-900 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">Current adherence</span>
+          <span className="text-sm text-gray-300">{t('common.currentAdherence')}</span>
           <span className="text-lg font-semibold">{adherencePct}%</span>
         </div>
-        <ProgressBar value={adherencePct} max={100} />
-        <p className="text-sm text-gray-600">Staying above 70% steadily pushes your score upward.</p>
+        <Bar value={adherencePct} max={100} />
+        <p className="text-sm text-gray-400">{t('common.stayingAbove')}</p>
       </section>
 
       <section className="grid grid-cols-1 gap-3">
         {cards.map(c => (
-          <div key={c.label} className="rounded-2xl border border-gray-200 p-4 bg-white">
-            <div className="flex items-center justify-between">
+          <div key={c.label} className="rounded-2xl border border-gray-800 p-4 bg-gray-900">
+            <div className="flex items-center justify-between mb-1">
               <h3 className="font-semibold">{c.label}</h3>
               <span className="text-xl font-bold">{c.score}</span>
             </div>
-            <p className="mt-1 text-sm text-gray-600">{c.copy}</p>
+            <p className="text-sm text-gray-300">{c.copy}</p>
             <div className="mt-3">
-              <ProgressBar value={c.score} max={100} />
+              <Bar value={c.score} max={100} showPct />
             </div>
+            <p className="mt-1 text-xs text-gray-500">{t('roadmap.assuming')}</p>
           </div>
         ))}
       </section>
 
-      <section className="rounded-2xl border border-gray-200 p-4 bg-white space-y-3">
-        <h3 className="font-semibold">Where to focus</h3>
-        {TASKS.map(t => {
-          const pct = Math.round((byTask[t.key] ?? 0) * 100);
+      <section className="rounded-2xl border border-gray-800 p-4 bg-gray-900 space-y-3">
+        <h3 className="font-semibold">{t('common.focus')}</h3>
+        {(Object.keys(byTask) as TaskKey[]).map(k => {
+          const pct = Math.round((byTask[k] ?? 0) * 100);
           return (
-            <div key={t.key} className="space-y-1">
+            <div key={k} className="space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-sm">{t.label}</span>
+                <span className="text-sm">{t(`tasks.${k}`)}</span>
                 <span className="text-sm font-medium">{pct}%</span>
               </div>
-              <ProgressBar value={pct} max={100} />
+              <Bar value={pct} max={100} />
             </div>
           );
         })}
       </section>
 
-      <nav className="flex justify-center gap-3 text-sm text-gray-600">
-        <a className="underline" href="/daily">Back to Today</a>
+      <nav className="flex justify-center gap-3 text-sm text-gray-400">
+        <a className="underline" href="/daily">{t('common.backToToday')}</a>
         <span>·</span>
-        <a className="underline" href="/premium">See Premium</a>
+        <a className="underline" href="/premium">{t('common.seePremium')}</a>
+        <span>·</span>
+        <a className="underline" href="/future">{t('common.viewFuture')}</a>
       </nav>
     </main>
   );
