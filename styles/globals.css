@@ -1,0 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* custom resets or styles can go here */
+html, body { height: 100%; }
