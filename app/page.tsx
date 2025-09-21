@@ -7,11 +7,11 @@ export default function Home() {
       <section className="grid md:grid-cols-2 gap-8 items-center">
         <div className="space-y-4">
           <div className="badge">Evidence-guided micro-habits</div>
-          <h1 className="h1">Build stronger bones, one tiny win a day.</h1>
-          <p className="muted">Personalised actions based on risk, lifestyle, and goals. Track progress, earn XP, and keep a steady streak.</p>
+          <h1 className="h1">Regain momentum, one tiny win a day.</h1>
+          <p className="muted">Build healthy bone habits with simple daily tasks. Track your streak, see progress, and grow with Regain.</p>
           <div className="flex gap-2">
-            <Link href="/profile" className="btn-primary">Create Profile / Log In</Link>
-            <Link href="/dashboard" className="btn-ghost">View Dashboard</Link>
+            <Link href="/account" className="btn-primary">Create Profile / Log In</Link>
+            <Link href="/tasks" className="btn-ghost">Go to Tasks</Link>
           </div>
         </div>
         <div className="card p-6">
@@ -19,7 +19,7 @@ export default function Home() {
           <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden">
             <div className="h-full bg-white" style={{ width: '40%' }} />
           </div>
-          <p className="muted mt-3">Demo data — connect your habits to see this move.</p>
+          <p className="muted mt-3">Demo data — connect your tasks to see this move.</p>
         </div>
       </section>
 
@@ -27,7 +27,7 @@ export default function Home() {
       <section className="space-y-3">
         <h2 className="h2">About Me</h2>
         <p className="muted">Save a few basics so we can tailor your plan: age range, movement level, vitamin D exposure, dietary calcium, and goals.</p>
-        <Link href="/profile" className="btn-ghost">Update Profile</Link>
+        <Link href="/account" className="btn-ghost">Update Profile</Link>
       </section>
 
       {/* How It Works */}
@@ -46,10 +46,9 @@ export default function Home() {
 
       {/* Evidence */}
       <section className="space-y-3">
-        <h2 className="h2">Why these habits?</h2>
-        <p className="muted">Everything in your feed is mapped to fall-prevention and bone health guidelines. Each action shows its rationale.</p>
+        <h2 className="h2">Why these tasks?</h2>
+        <p className="muted">Everything in your feed is mapped to recognised bone health guidance. Each action shows its rationale.</p>
       </section>
     </div>
   );
 }
-
