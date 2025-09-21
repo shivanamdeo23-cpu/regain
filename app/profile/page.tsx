@@ -1,134 +1,54 @@
 'use client';
+import { useState, useEffect } from 'react';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+const FIELDS = [
+  { key: 'age', label: 'Age range', type: 'select', options: ['<30','30-45','46-60','>60'] },
+  { key: 'activity', label: 'Movement level', type: 'select', options: ['Low','Moderate','High'] },
+  { key: 'calcium', label: 'Dietary calcium', type: 'select', options: ['Low','Adequate'] },
+  { key: 'vitd', label: 'Vitamin D exposure', type: 'select', options: ['Low','Adequate'] },
+  { key: 'goal', label: 'Primary goal', type: 'text' },
+];
 
-export default function ProfileSetup() {
-  const router = useRouter();
-  const [step, setStep] = useState(1);
-  const [name, setName] = useState('');
-  const [age, setAge] = useState('');
-  const [condition, setCondition] = useState('');
-
-  const nextStep = () => setStep(step + 1);
-  const prevStep = () => setStep(step - 1);
-
-  const handleFinish = () => {
-    // Save to localStorage (so Dashboard could greet user later)
-    localStorage.setItem('profile', JSON.stringify({ name, age, condition }));
-    router.push('/dashboard');
+export default function Profile() {
+  const [data, setData] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const raw = localStorage.getItem('bonehealth-profile');
+    if (raw) setData(JSON.parse(raw));
+  }, []);
+  const save = () => {
+    localStorage.setItem('bonehealth-profile', JSON.stringify(data));
+    alert('Saved');
   };
-
   return (
-    <main style={styles.page}>
-      <h1 style={styles.title}>Profile Setup</h1>
-
-      {step === 1 && (
-        <div style={styles.box}>
-          <p style={styles.text}>What is your name?</p>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={styles.input}
-          />
-          <div style={styles.buttons}>
-            <button style={styles.next} onClick={nextStep} disabled={!name}>
-              Next
-            </button>
+    <div className="space-y-6 max-w-xl">
+      <h1 className="h1">Your Profile</h1>
+      <div className="card p-6 space-y-4">
+        {FIELDS.map(f => (
+          <div key={f.key} className="space-y-2">
+            <label className="block text-sm text-white/80">{f.label}</label>
+            {f.type === 'select' ? (
+              <select
+                className="w-full bg-white/5 border border-white/10 rounded-2xl p-2"
+                value={data[f.key] || ''}
+                onChange={e => setData(prev => ({ ...prev, [f.key]: e.target.value }))}
+              >
+                <option value="" disabled>Select…</option>
+                {f.options!.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            ) : (
+              <input
+                className="w-full bg-white/5 border border-white/10 rounded-2xl p-2"
+                value={data[f.key] || ''}
+                onChange={e => setData(prev => ({ ...prev, [f.key]: e.target.value }))}
+              />
+            )}
           </div>
+        ))}
+        <div className="flex gap-2">
+          <button onClick={save} className="btn-primary">Save</button>
+          <button onClick={() => { localStorage.removeItem('bonehealth-profile'); setData({}); }} className="btn-ghost">Reset</button>
         </div>
-      )}
-
-      {step === 2 && (
-        <div style={styles.box}>
-          <p style={styles.text}>How old are you?</p>
-          <input
-            type="number"
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            style={styles.input}
-          />
-          <div style={styles.buttons}>
-            <button style={styles.back} onClick={prevStep}>Back</button>
-            <button style={styles.next} onClick={nextStep} disabled={!age}>
-              Next
-            </button>
-          </div>
-        </div>
-      )}
-
-      {step === 3 && (
-        <div style={styles.box}>
-          <p style={styles.text}>Why are you using ReGain?</p>
-          <select
-            value={condition}
-            onChange={(e) => setCondition(e.target.value)}
-            style={styles.input}
-          >
-            <option value="">Select an option</option>
-            <option value="prevention">Prevention</option>
-            <option value="pre-op">Pre-op</option>
-            <option value="post-op">Post-op</option>
-          </select>
-          <div style={styles.buttons}>
-            <button style={styles.back} onClick={prevStep}>Back</button>
-            <button
-              style={styles.next}
-              onClick={handleFinish}
-              disabled={!condition}
-            >
-              Continue to Dashboard
-            </button>
-          </div>
-        </div>
-      )}
-    </main>
+      </div>
+    </div>
   );
 }
-
-const styles: { [key: string]: React.CSSProperties } = {
-  page: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: "2rem",
-    background: "#f9f9f9",
-    minHeight: "100vh",
-    textAlign: "center",
-  },
-  title: { fontSize: "2rem", marginBottom: "1rem" },
-  box: {
-    background: "#fff",
-    padding: "2rem",
-    borderRadius: "12px",
-    border: "2px solid #ddd",
-    marginTop: "1rem",
-    width: "300px",
-  },
-  text: { fontSize: "1.2rem", marginBottom: "1rem" },
-  input: {
-    fontSize: "1.1rem",
-    padding: "0.6rem",
-    width: "100%",
-    borderRadius: "8px",
-    border: "1px solid #aaa",
-    marginBottom: "1rem",
-  },
-  buttons: { display: "flex", justifyContent: "space-between" },
-  next: {
-    padding: "0.6rem 1.2rem",
-    borderRadius: "8px",
-    border: "none",
-    background: "#4CAF50",
-    color: "#fff",
-    cursor: "pointer",
-  },
-  back: {
-    padding: "0.6rem 1.2rem",
-    borderRadius: "8px",
-    border: "1px solid #aaa",
-    background: "#f0f0f0",
-    cursor: "pointer",
-  },
-};
