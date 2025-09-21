@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { useXP } from '@/store/xp';
+import { useXP } from '../../store/xp';
+
 
 export default function HabitCard({ habitKey }: { habitKey: string }) {
   const { habits, completeHabit } = useXP();
