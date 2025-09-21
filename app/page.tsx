@@ -29,8 +29,8 @@ export default function Home() {
             Create Profile / Log In
           </button>
         ) : (
-          <button style={styles.button} onClick={() => router.push('/dashboard')}>
-            Go to Dashboard
+          <button style={styles.button} onClick={() => router.push('/daily')}>
+            Go to Daily Tasks
           </button>
         )}
       </section>
