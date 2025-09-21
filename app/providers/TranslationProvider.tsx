@@ -1,29 +1,83 @@
-'use client';
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import en from '@/lib/i18n/en';
-import hi from '@/lib/i18n/hi';
+"use client";
 
-type Locale = 'en' | 'hi';
-const DICTS = { en, hi };
-const LS_KEY = 're_gain:locale';
+import React, { createContext, useContext, useState } from "react";
 
-type Ctx = { locale: Locale; setLocale: (l: Locale) => void; t: (path: string, vars?: Record<string,string|number>) => string; };
-const CtxI18n = createContext<Ctx | null>(null);
+type Dict = Record<string, any>;
 
-function get(obj: any, path: string) { return path.split('.').reduce((o,k)=>o?.[k], obj); }
+type I18nContextType = {
+  locale: string;
+  t: (key: string) => any;
+  setLocale: (loc: string) => void;
+};
+
+const I18nContext = createContext<I18nContextType | null>(null);
+
+const dictionary: Record<string, Dict> = {
+  en: {
+    common: {
+      backToToday: "Back to Today",
+      roadmap: "Roadmap"
+    },
+    future: {
+      pageTitle: "Coming Soon",
+      subtitle: "Ideas and features we are exploring",
+      statuses: {
+        planned: "Planned",
+        building: "In Progress",
+        research: "Research"
+      },
+      items: {
+        socialSeasons: {
+          title: "Social Seasons",
+          desc: "Community-driven challenges synced to the calendar."
+        },
+        coach: {
+          title: "AI Coach",
+          desc: "Personalised tips and habit nudges."
+        },
+        analytics: {
+          title: "Bone Analytics",
+          desc: "Track risk scores, streaks, and outcomes."
+        },
+        healthSync: {
+          title: "Health Sync",
+          desc: "Connect wearables and health records."
+        },
+        dexa: {
+          title: "DEXA Integration",
+          desc: "Upload scan reports for deeper insights."
+        },
+        rehab: {
+          title: "Rehab Mode",
+          desc: "Tailored plans for post-op recovery."
+        }
+      }
+    }
+  }
+};
 
 export function TranslationProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocale] = useState<Locale>('en');
-  useEffect(() => { const s = (localStorage.getItem(LS_KEY) as Locale) || 'en'; setLocale(s); document.documentElement.lang = s; }, []);
-  useEffect(() => { localStorage.setItem(LS_KEY, locale); document.documentElement.lang = locale; }, [locale]);
-  const dict = DICTS[locale];
-  const t = useMemo(() => (path: string, vars?: Record<string, string | number>) => {
-    let out = get(dict, path) ?? path;
-    if (typeof out !== 'string') return path;
-    for (const [k,v] of Object.entries(vars || {})) out = out.replace(new RegExp(`\\{${k}\\}`,'g'), String(v));
-    return out;
-  }, [dict]);
-  return <CtxI18n.Provider value={{ locale, setLocale, t }}>{children}</CtxI18n.Provider>;
+  const [locale, setLocale] = useState("en");
+
+  const t = (key: string): any => {
+    const parts = key.split(".");
+    let result: any = dictionary[locale];
+    for (const p of parts) {
+      result = result?.[p];
+      if (!result) break;
+    }
+    return result ?? key;
+  };
+
+  return (
+    <I18nContext.Provider value={{ locale, t, setLocale }}>
+      {children}
+    </I18nContext.Provider>
+  );
 }
 
-export function useI18n(){ const c = useContext(CtxI18n); if(!c) throw new Error('useI18n outside provider'); return c; }
+export function useI18n() {
+  const ctx = useContext(I18nContext);
+  if (!ctx) throw new Error("useI18n must be used within TranslationProvider");
+  return ctx;
+}
