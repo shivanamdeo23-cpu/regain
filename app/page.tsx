@@ -1,120 +1,54 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 export default function Home() {
-  const router = useRouter();
-  const [profile, setProfile] = useState<{ name?: string; age?: string; condition?: string }>({});
-
-  // Load profile if it exists
-  useEffect(() => {
-    const saved = localStorage.getItem('profile');
-    if (saved) {
-      setProfile(JSON.parse(saved));
-    }
-  }, []);
-
   return (
-    <main style={styles.page}>
-      {/* Section 1: Welcome Header */}
-      <section style={styles.section}>
-        <h1 style={styles.title}>Welcome to ReGain</h1>
-        <p style={styles.tagline}>
-          Your daily partner in <strong>building stronger bones</strong>, 
-          preventing falls, and supporting recovery.
-        </p>
-        {!profile.name ? (
-          <button style={styles.button} onClick={() => router.push('/profile')}>
-            Create Profile / Log In
-          </button>
-        ) : (
-          <button style={styles.button} onClick={() => router.push('/daily')}>
-            Go to Daily Tasks
-          </button>
-        )}
+    <div className="space-y-12">
+      {/* Hero */}
+      <section className="grid md:grid-cols-2 gap-8 items-center">
+        <div className="space-y-4">
+          <div className="badge">Evidence-guided micro-habits</div>
+          <h1 className="h1">Build stronger bones, one tiny win a day.</h1>
+          <p className="muted">Personalised actions based on risk, lifestyle, and goals. Track progress, earn XP, and keep a steady streak.</p>
+          <div className="flex gap-2">
+            <Link href="/profile" className="btn-primary">Create Profile / Log In</Link>
+            <Link href="/dashboard" className="btn-ghost">View Dashboard</Link>
+          </div>
+        </div>
+        <div className="card p-6">
+          <p className="mb-3">Weekly progress</p>
+          <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-full bg-white" style={{ width: '40%' }} />
+          </div>
+          <p className="muted mt-3">Demo data — connect your habits to see this move.</p>
+        </div>
       </section>
 
-      {/* Section 2: About Me */}
-      {profile.name && (
-        <section style={styles.infoBox}>
-          <h2 style={styles.sectionTitle}>About Me</h2>
-          <p><strong>Name:</strong> {profile.name}</p>
-          <p><strong>Age:</strong> {profile.age}</p>
-          <p><strong>Reason for using ReGain:</strong> {profile.condition}</p>
-        </section>
-      )}
-
-      {/* Section 3: Why ReGain */}
-      <section style={styles.infoBox}>
-        <h2 style={styles.sectionTitle}>Why ReGain?</h2>
-        <ul style={styles.list}>
-          <li>Keep bones strong with daily calcium & vitamin D.</li>
-          <li>Walking and balance exercises reduce fall risk by 30%.</li>
-          <li>Sunlight improves vitamin D absorption.</li>
-          <li>Family can track and support your progress (premium).</li>
-        </ul>
+      {/* About Me */}
+      <section className="space-y-3">
+        <h2 className="h2">About Me</h2>
+        <p className="muted">Save a few basics so we can tailor your plan: age range, movement level, vitamin D exposure, dietary calcium, and goals.</p>
+        <Link href="/profile" className="btn-ghost">Update Profile</Link>
       </section>
 
-      {/* Section 4: How it works */}
-      <section style={styles.footerBox}>
-        <h3 style={styles.sectionTitle}>How it works</h3>
-        <p>Track your habits daily.</p>
-        <p>Earn points and unlock badges.</p>
-        <p>Build healthy streaks.</p>
-        <p>Share your progress with family.</p>
+      {/* How It Works */}
+      <section className="grid md:grid-cols-3 gap-4">
+        {[
+          { title: 'Assess', desc: 'Short intake to gauge fracture risk factors.' },
+          { title: 'Act', desc: 'Daily micro-habits with clear “why”.' },
+          { title: 'Adapt', desc: 'Your plan evolves with your progress.' },
+        ].map((s) => (
+          <div key={s.title} className="card p-5">
+            <div className="h3">{s.title}</div>
+            <p className="muted mt-1">{s.desc}</p>
+          </div>
+        ))}
       </section>
-    </main>
+
+      {/* Evidence */}
+      <section className="space-y-3">
+        <h2 className="h2">Why these habits?</h2>
+        <p className="muted">Everything in your feed is mapped to fall-prevention and bone health guidelines. Each action shows its rationale.</p>
+      </section>
+    </div>
   );
 }
-
-const styles: { [key: string]: React.CSSProperties } = {
-  page: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: "2rem",
-    background: "#f9f9f9",
-    minHeight: "100vh",
-  },
-  section: {
-    textAlign: "center",
-    marginBottom: "2rem",
-    maxWidth: "600px",
-  },
-  title: { fontSize: "2.8rem", marginBottom: "1rem" },
-  tagline: { fontSize: "1.3rem", marginBottom: "1.5rem" },
-  sectionTitle: { fontSize: "1.6rem", marginBottom: "1rem" },
-  infoBox: {
-    background: "#fff",
-    padding: "1.5rem",
-    borderRadius: "12px",
-    border: "2px solid #ddd",
-    marginBottom: "2rem",
-    width: "100%",
-    maxWidth: "600px",
-  },
-  footerBox: {
-    background: "#e8f5ff",
-    padding: "1.2rem",
-    borderRadius: "12px",
-    marginTop: "2rem",
-    maxWidth: "600px",
-    width: "100%",
-  },
-  list: {
-    textAlign: "left",
-    fontSize: "1.1rem",
-    lineHeight: "1.6",
-  },
-  button: {
-    fontSize: "1.3rem",
-    padding: "1rem 2rem",
-    borderRadius: "12px",
-    cursor: "pointer",
-    border: "none",
-    background: "#4CAF50",
-    color: "#fff",
-    marginTop: "1rem",
-  },
-};
