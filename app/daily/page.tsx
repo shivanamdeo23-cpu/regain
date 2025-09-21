@@ -1,7 +1,6 @@
 'use client';
 
-export const dynamic = 'force-dynamic'; // avoid build-time prerender for this page
-// export const revalidate = 0; // (optional) also ensures no caching
+export const dynamic = 'force-dynamic';
 
 import React, { useEffect, useMemo, useState } from 'react';
 
@@ -42,16 +41,12 @@ const loadDay = (dateStr: string): DayState | null => {
   try {
     const raw = localStorage.getItem(kDay(dateStr));
     return raw ? (JSON.parse(raw) as DayState) : null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 };
 
 const saveDay = (state: DayState) => {
   if (!isBrowser) return;
-  try {
-    localStorage.setItem(kDay(state.date), JSON.stringify(state));
-  } catch {}
+  try { localStorage.setItem(kDay(state.date), JSON.stringify(state)); } catch {}
 };
 
 const dateOffset = (baseISO: string, days: number) => {
@@ -64,7 +59,7 @@ const dateOffset = (baseISO: string, days: number) => {
 const ProgressBar = ({ value, max }: { value: number; max: number }) => {
   const pct = Math.max(0, Math.min(100, Math.round((value / max) * 100)));
   return (
-    <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+    <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
       <div className="h-full bg-indigo-600 transition-all" style={{ width: `${pct}%` }} />
     </div>
   );
@@ -105,11 +100,10 @@ const PaywallTeaser = () => (
 export default function DailyPage() {
   const today = isoDay();
 
-  // IMPORTANT: initialize without touching localStorage (SSR-safe)
+  // init without touching localStorage (SSR-safe)
   const [day, setDay] = useState<DayState>(emptyDay(today));
   const [hydrated, setHydrated] = useState(false);
 
-  // On client, hydrate from localStorage once
   useEffect(() => {
     if (!isBrowser) return;
     const stored = loadDay(today);
@@ -117,21 +111,18 @@ export default function DailyPage() {
     setHydrated(true);
   }, [today]);
 
-  // Persist whenever state changes (client only)
   useEffect(() => {
     if (!isBrowser) return;
     saveDay(day);
   }, [day]);
 
-  // Derived values (safe either way)
-  const xp = useMemo(
-    () => TASKS.reduce((sum, t) => sum + (day.tasks[t.key] ? t.xp : 0), 0),
-    [day]
-  );
+  // Derived
+  const xp = useMemo(() => TASKS.reduce((sum, t) => sum + (day.tasks[t.key] ? t.xp : 0), 0), [day]);
+  const completedCount = useMemo(() => TASKS.filter(t => day.tasks[t.key]).length, [day]);
+  const totalTasks = TASKS.length;
 
   const weeklyCounts = useMemo(() => {
     const counts: Record<string, number> = Object.fromEntries(TASKS.map(t => [t.key, 0]));
-    // last 7 days incl. today
     for (let i = 0; i < 7; i++) {
       const dISO = dateOffset(day.date, -i);
       const ds = loadDay(dISO);
@@ -139,7 +130,7 @@ export default function DailyPage() {
       TASKS.forEach(t => { if (ds.tasks?.[t.key]) counts[t.key] += 1; });
     }
     return counts;
-  }, [day.date, hydrated]); // recalc after hydration
+  }, [day.date, hydrated]);
 
   const streak = useMemo(() => {
     let s = 0;
@@ -153,12 +144,8 @@ export default function DailyPage() {
     return s;
   }, [day.date, hydrated]);
 
-  const pretty = new Date(day.date).toLocaleDateString(undefined, {
-    weekday: 'long', month: 'short', day: 'numeric'
-  });
-
-  const setTask = (key: string, done: boolean) =>
-    setDay(prev => ({ ...prev, tasks: { ...prev.tasks, [key]: done } }));
+  const pretty = new Date(day.date).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+  const setTask = (key: string, done: boolean) => setDay(prev => ({ ...prev, tasks: { ...prev.tasks, [key]: done } }));
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6 space-y-6">
@@ -168,24 +155,34 @@ export default function DailyPage() {
           <h1 className="text-2xl font-bold">Today</h1>
           <span className="text-sm text-gray-500">{pretty}</span>
         </div>
-        <div className="rounded-2xl border border-gray-200 p-4 bg-white">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
+
+        <div className="rounded-2xl border border-gray-200 p-4 bg-white space-y-4">
+          {/* XP progress */}
+          <div>
+            <div className="flex items-center justify-between">
               <div className="text-sm text-gray-500">Daily XP</div>
               <div className="text-xl font-semibold">{xp} / {DAILY_XP_GOAL}</div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">Streak</span>
-              <span className="text-sm font-semibold">{streak} 🔥</span>
-            </div>
-          </div>
-          <div className="mt-3">
-            <ProgressBar value={xp} max={DAILY_XP_GOAL} />
+            <div className="mt-2"><ProgressBar value={xp} max={DAILY_XP_GOAL} /></div>
             <p className="mt-2 text-sm text-gray-600">
-              {xp >= DAILY_XP_GOAL
-                ? 'Daily goal crushed — keep going for bonus XP!'
+              {xp >= DAILY_XP_GOAL ? 'Daily goal crushed — keep going for bonus XP!'
                 : `You’re ${Math.max(0, DAILY_XP_GOAL - xp)} XP away from today’s goal.`}
             </p>
+          </div>
+
+          {/* Tasks Completed progress (correlated to toggles) */}
+          <div>
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-500">Tasks Completed</div>
+              <div className="text-xl font-semibold">{completedCount} / {totalTasks}</div>
+            </div>
+            <div className="mt-2"><ProgressBar value={completedCount} max={totalTasks} /></div>
+          </div>
+
+          {/* Streak */}
+          <div className="flex items-center justify-end gap-2">
+            <span className="text-sm text-gray-500">Streak</span>
+            <span className="text-sm font-semibold">{streak} 🔥</span>
           </div>
         </div>
       </header>
@@ -255,7 +252,9 @@ export default function DailyPage() {
         <span>·</span>
         <a className="underline" href="/friends">Invite friends</a>
         <span>·</span>
-        <a className="underline" href="/profile">Profile</a>
+        <a className="underline" href="/roadmap">Roadmap</a>
+        <span>·</span>
+        <a className="underline" href="/premium">Premium</a>
       </nav>
     </main>
   );
