@@ -1,5 +1,100 @@
 "use client";
 
+// Safe Mode: no localStorage. Pure React state so you can confirm
+// that toggling DEcreases progress. If THIS works, the issue is storage.
+
+import { useMemo, useState } from "react";
+
+type Task = {
+  id: string;
+  label: string;
+  category: "Nutrition" | "Exercise" | "Lifestyle";
+};
+
+type TasksByCategory = Record<Task["category"], Task[]>;
+
+const ALL_TASKS: Task[] = [
+  { id: "calcium", label: "Take calcium", category: "Nutrition" },
+  { id: "vitD", label: "Vitamin D", category: "Nutrition" },
+  { id: "walk10", label: "10–20 min walk", category: "Exercise" },
+  { id: "resistance", label: "5–10 min resistance", category: "Exercise" },
+  { id: "balance", label: "3 min balance", category: "Exercise" },
+  { id: "sleep", label: "7–8 h sleep", category: "Lifestyle" },
+];
+
+const POINTS_PER_TASK = 10;
+
+function groupTasks(tasks: Task[]): TasksByCategory {
+  return tasks.reduce((acc, t) => {
+    (acc[t.category] ||= []).push(t);
+    return acc;
+  }, {} as TasksByCategory);
+}
+
+export default function Page() {
+  const [completed, setCompleted] = useState<string[]>([]);
+  const grouped = useMemo(() => groupTasks(ALL_TASKS), []);
+
+  const completedCount = completed.length;
+  const xp = completedCount * POINTS_PER_TASK;
+  const maxXp = ALL_TASKS.length * POINTS_PER_TASK;
+  const progress = Math.round((xp / maxXp) * 100);
+
+  function toggleTask(id: string) {
+    setCompleted((prev) => {
+      const has = prev.includes(id);
+      const next = has ? prev.filter((x) => x !== id) : [...prev, id];
+      console.log("completed:", next, "xp:", next.length * POINTS_PER_TASK, "progress:", Math.round((next.length * POINTS_PER_TASK) / maxXp * 100));
+      return next;
+    });
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto p-6 space-y-6">
+      <h1 className="text-2xl font-semibold">Daily Tasks — Safe Mode</h1>
+
+      <div className="w-full bg-gray-100 rounded-full h-3">
+        <div className="h-3 rounded-full transition-all" style={{ width: `${progress}%` }} />
+      </div>
+      <div className="text-sm text-gray-600">XP: {xp}/{maxXp} · {completedCount}/{ALL_TASKS.length} tasks</div>
+
+      {Object.entries(grouped).map(([cat, items]) => (
+        <div key={cat}>
+          <h2 className="text-lg font-medium mb-2">{cat}</h2>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {items.map((t) => {
+              const done = completed.includes(t.id);
+              return (
+                <div key={t.id} className={`p-4 rounded-2xl border ${done ? "bg-green-50 border-green-200" : "bg-white border-gray-200"}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium">{t.label}</div>
+                    <button
+                      className={`px-3 py-1.5 text-sm rounded-full font-medium border ${done ? "bg-gray-100" : "bg-blue-50"}`}
+                      onClick={() => toggleTask(t.id)}
+                    >
+                      {done ? "Undo" : "Mark done"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      <button
+        className="text-xs text-gray-600 underline"
+        onClick={() => setCompleted([])}
+      >
+        Reset (dev)
+      </button>
+    </div>
+  );
+}
+
+
+"use client";
+
 // app/daily/page.tsx — Daily Tasks (toggle + derived XP)
 // - Toggle on/off per task (Undo supported)
 // - XP & progress are FULLY DERIVED from completed[] (never stored/incremented)
