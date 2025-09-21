@@ -1,34 +1,19 @@
 export const dynamic = 'force-dynamic';
 
-
 import './globals.css';
-import type { ReactNode } from 'react';
-import Link from 'next/link';
+import { TranslationProvider } from './providers/TranslationProvider';
+import LanguageToggle from '@/components/LanguageToggle';
 
-export const metadata = {
-  title: 'Regain',
-  description: 'Regain — daily micro-habits for stronger recovery and resilience.',
-};
-
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>
-        <header className="sticky top-0 z-50 border-b border-white/10 backdrop-blur bg-[var(--bg)]/70">
-          <div className="container flex h-14 items-center justify-between">
-            <Link href="/" className="font-semibold">Regain</Link>
-            <nav className="flex items-center gap-2">
-              <a className="btn-ghost" href="/tasks">Tasks</a>
-              <a className="btn-ghost" href="/calendar">Calendar</a>
-              <a className="btn-ghost" href="/roadmap">Roadmap</a>
-              <a className="btn-primary" href="/account">Account</a>
-            </nav>
-          </div>
-        </header>
-        <main className="container py-8">{children}</main>
-        <footer className="container py-12 text-sm text-white/60">
-          Built with ❤️ with Regain.
-        </footer>
+    <html suppressHydrationWarning>
+      <body className="bg-gray-900 text-gray-50">
+        <TranslationProvider>
+          <header className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-end">
+            <LanguageToggle />
+          </header>
+          {children}
+        </TranslationProvider>
       </body>
     </html>
   );
