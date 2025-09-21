@@ -15,9 +15,13 @@ export default function Dashboard() {
   const [xp, setXp] = useState(0);
   const [streak, setStreak] = useState(0);
   const [message, setMessage] = useState("");
+  const [profile, setProfile] = useState<{ name?: string; age?: string; condition?: string }>({});
 
-  // Load saved progress from localStorage
+  // Load profile + saved progress
   useEffect(() => {
+    const savedProfile = localStorage.getItem("profile");
+    if (savedProfile) setProfile(JSON.parse(savedProfile));
+
     const savedXP = localStorage.getItem("xp");
     const savedStreak = localStorage.getItem("streak");
     if (savedXP) setXp(parseInt(savedXP, 10));
@@ -32,7 +36,7 @@ export default function Dashboard() {
       setMessage(habits[i].fact);
       localStorage.setItem("xp", String(newXP));
 
-      // Update weekly challenges progress
+      // Save weekly challenge progress
       updateChallengeProgress(habits[i].key);
     }
     newCompleted[i] = !newCompleted[i];
@@ -45,27 +49,33 @@ export default function Dashboard() {
     }
   };
 
-  // Save challenge progress to localStorage
   const updateChallengeProgress = (habitKey: string) => {
     const challenges = JSON.parse(localStorage.getItem("challenges") || "{}");
 
-    if (habitKey === "walk") {
-      challenges.walk = (challenges.walk || 0) + 10; // +10 mins
-    }
-    if (habitKey === "sunlight") {
-      challenges.sunlight = (challenges.sunlight || 0) + 1; // +1 day
-    }
-    if (habitKey === "balance") {
-      challenges.balance = (challenges.balance || 0) + 1; // +1 session
-    }
+    if (habitKey === "walk") challenges.walk = (challenges.walk || 0) + 10;
+    if (habitKey === "sunlight") challenges.sunlight = (challenges.sunlight || 0) + 1;
+    if (habitKey === "balance") challenges.balance = (challenges.balance || 0) + 1;
 
     localStorage.setItem("challenges", JSON.stringify(challenges));
   };
 
   return (
     <main style={styles.page}>
-      <h1 style={styles.title}>Dashboard</h1>
+      {/* Personalised greeting */}
+      {profile.name ? (
+        <section style={styles.greetingBox}>
+          <h1>Welcome back, {profile.name} 👋</h1>
+          <p>Age: {profile.age}</p>
+          <p>Focus: {profile.condition}</p>
+          <p style={styles.encourage}>
+            Let's keep your bones strong today!
+          </p>
+        </section>
+      ) : (
+        <h1 style={styles.title}>Dashboard</h1>
+      )}
 
+      {/* XP + Streak */}
       <div style={styles.statsBox}>
         <p>⭐ XP: {xp} / 100</p>
         <ProgressBar value={xp % 100} max={100} />
@@ -73,6 +83,7 @@ export default function Dashboard() {
         <p>🏆 Level {Math.floor(xp / 100) + 1}</p>
       </div>
 
+      {/* Habits */}
       <h2 style={styles.subtitle}>Today's Habits</h2>
       <ul style={styles.list}>
         {habits.map((habit, i) => (
@@ -91,7 +102,13 @@ export default function Dashboard() {
         ))}
       </ul>
 
-      {message && <div style={styles.factBox}><p>{message}</p></div>}
+      {/* Motivation */}
+      {message && (
+        <div style={styles.factBox}>
+          <p>{message}</p>
+        </div>
+      )}
+
       {completed.every(Boolean) && (
         <div style={styles.summaryBox}>
           🎉 Amazing! You completed all your habits today. Stronger bones incoming!
@@ -101,6 +118,7 @@ export default function Dashboard() {
   );
 }
 
+// Progress Bar
 function ProgressBar({ value, max }: { value: number; max: number }) {
   const percentage = Math.min((value / max) * 100, 100);
   return (
@@ -110,15 +128,83 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
   );
 }
 
+// Styles
 const styles: { [key: string]: React.CSSProperties } = {
-  page: { display: "flex", flexDirection: "column", alignItems: "center", padding: "2rem", background: "#f9f9f9", minHeight: "100vh" },
+  page: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    padding: "2rem",
+    background: "#f9f9f9",
+    minHeight: "100vh",
+    fontSize: "1.2rem",
+  },
   title: { fontSize: "2rem", marginBottom: "1.5rem" },
+  greetingBox: {
+    background: "#fff",
+    padding: "1.5rem",
+    borderRadius: "12px",
+    border: "2px solid #ddd",
+    marginBottom: "2rem",
+    textAlign: "center",
+  },
+  encourage: {
+    marginTop: "1rem",
+    fontSize: "1.2rem",
+    fontWeight: "bold",
+    color: "#2d6a2d",
+  },
   subtitle: { fontSize: "1.5rem", marginTop: "2rem", marginBottom: "1rem" },
   list: { listStyle: "none", padding: 0 },
-  button: { fontSize: "1.2rem", padding: "0.8rem 1.2rem", borderRadius: "12px", border: "2px solid #333", cursor: "pointer", width: "260px" },
-  statsBox: { textAlign: "center", marginBottom: "2rem", background: "#fff", padding: "1rem 2rem", borderRadius: "12px", border: "2px solid #ddd" },
-  factBox: { marginTop: "1.5rem", padding: "1rem", border: "2px solid #4CAF50", borderRadius: "12px", background: "#eaffea", color: "#2d6a2d", fontWeight: "bold", maxWidth: "400px", textAlign: "center" },
-  summaryBox: { marginTop: "2rem", padding: "1rem", border: "2px solid #333", borderRadius: "12px", background: "#ffe680", fontWeight: "bold", textAlign: "center", maxWidth: "400px" },
-  progressContainer: { width: "100%", height: "25px", background: "#ddd", borderRadius: "12px", overflow: "hidden", margin: "0.5rem 0" },
-  progressFill: { height: "100%", background: "#4CAF50", borderRadius: "12px", transition: "width 0.4s ease" }
+  button: {
+    fontSize: "1.2rem",
+    padding: "0.8rem 1.2rem",
+    borderRadius: "12px",
+    border: "2px solid #333",
+    cursor: "pointer",
+    width: "260px",
+  },
+  statsBox: {
+    textAlign: "center",
+    marginBottom: "2rem",
+    background: "#fff",
+    padding: "1rem 2rem",
+    borderRadius: "12px",
+    border: "2px solid #ddd",
+  },
+  factBox: {
+    marginTop: "1.5rem",
+    padding: "1rem",
+    border: "2px solid #4CAF50",
+    borderRadius: "12px",
+    background: "#eaffea",
+    color: "#2d6a2d",
+    fontWeight: "bold",
+    maxWidth: "400px",
+    textAlign: "center",
+  },
+  summaryBox: {
+    marginTop: "2rem",
+    padding: "1rem",
+    border: "2px solid #333",
+    borderRadius: "12px",
+    background: "#ffe680",
+    fontWeight: "bold",
+    textAlign: "center",
+    maxWidth: "400px",
+  },
+  progressContainer: {
+    width: "100%",
+    height: "25px",
+    background: "#ddd",
+    borderRadius: "12px",
+    overflow: "hidden",
+    margin: "0.5rem 0",
+  },
+  progressFill: {
+    height: "100%",
+    background: "#4CAF50",
+    borderRadius: "12px",
+    transition: "width 0.4s ease",
+  },
 };
