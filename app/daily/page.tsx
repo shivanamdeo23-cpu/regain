@@ -1,44 +1,6 @@
 "use client";
 
-// ULTRA‑MINIMAL DEBUG: one task, no styling magic, no storage, no streaks.
-// If XP/progress don't go down here, the issue is outside this component
-// (e.g., old build, different page rendering, or a second progress bar elsewhere).
-
-import { useState } from "react";
-
-export default function Page() {
-  const [done, setDone] = useState(false);
-  const POINTS_PER_TASK = 10;
-  const xp = (done ? 1 : 0) * POINTS_PER_TASK; // derived
-  const maxXp = 1 * POINTS_PER_TASK;
-  const progress = Math.round((xp / maxXp) * 100);
-
-  return (
-    <div style={{ maxWidth: 520, margin: "24px auto", padding: 16, fontFamily: "ui-sans-serif, system-ui" }}>
-      <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Daily Tasks — Ultra Minimal Debug</h1>
-
-      <div style={{ marginBottom: 8 }}>XP: <b>{xp}</b> / {maxXp} &nbsp;|&nbsp; Progress: <b>{progress}%</b></div>
-      <div style={{ height: 10, background: "#eee", borderRadius: 6, overflow: "hidden", marginBottom: 16 }}>
-        <div style={{ height: 10, width: `${progress}%`, background: "#4a9" }} />
-      </div>
-
-      <button
-        onClick={() => setDone(v => !v)}
-        style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #999", background: done ? "#f3f4f6" : "#e0ecff" }}
-      >
-        {done ? "Undo Calcium" : "Mark Calcium Done"}
-      </button>
-
-      <pre style={{ marginTop: 16, fontSize: 12, color: "#555", background: "#fafafa", padding: 12, borderRadius: 8 }}>
-        {JSON.stringify({ done, xp, progress }, null, 2)}
-      </pre>
-    </div>
-  );
-}
-
-// app/daily/page.tsx — FINAL (Simple, toggle, derived XP, no localStorage)
-// This version avoids storage entirely so progress ALWAYS goes up/down on toggle.
-// Once confirmed working, we can add persistence back.
+// app/daily/page.tsx — SIMPLE toggle, derived XP, no storage
 
 import { useMemo, useState } from "react";
 
@@ -59,7 +21,7 @@ const ALL_TASKS: Task[] = [
   { id: "hydration", label: "Drink 6–8 glasses of water", category: "Nutrition", evidence: "Hydration aids overall health and supports physical activity." },
 
   // Exercise
-  { id: "walk10", label: "10–20 min weight‑bearing walk", category: "Exercise", evidence: "Weight‑bearing exercise stimulates bone formation." },
+  { id: "walk10", label: "10–20 min weight-bearing walk", category: "Exercise", evidence: "Weight-bearing exercise stimulates bone formation." },
   { id: "resistance", label: "5–10 min resistance (bands/weights)", category: "Exercise", evidence: "Resistance training increases bone and muscle strength." },
   { id: "balance", label: "3 min balance practice", category: "Exercise", evidence: "Balance work reduces fall risk and fractures." },
 
@@ -70,7 +32,7 @@ const ALL_TASKS: Task[] = [
 ];
 
 const CATEGORIES: Task["category"][] = ["Nutrition", "Exercise", "Lifestyle"];
-const POINTS_PER_TASK = 10; // adjust freely
+const POINTS_PER_TASK = 10;
 
 function groupTasks(tasks: Task[]): TasksByCategory {
   return tasks.reduce((acc, t) => {
@@ -83,27 +45,35 @@ export default function Page() {
   const [completed, setCompleted] = useState<string[]>([]);
   const grouped = useMemo(() => groupTasks(ALL_TASKS), []);
 
+  // DERIVED ONLY — do not store XP anywhere
   const completedCount = completed.length;
-  const xp = completedCount * POINTS_PER_TASK;           // derived, not stored
+  const xp = completedCount * POINTS_PER_TASK;
   const maxXp = ALL_TASKS.length * POINTS_PER_TASK;
   const progress = Math.round((xp / maxXp) * 100);
 
   function toggleTask(id: string) {
-    setCompleted((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setCompleted(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
   }
 
   return (
     <div className="max-w-3xl mx-auto p-6">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold">Daily Bone Health Tasks</h1>
-        <div className="text-sm text-gray-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">XP: {xp}/{maxXp}</div>
+        <div className="text-sm text-gray-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
+          XP: {xp}/{maxXp}
+        </div>
       </div>
 
       {/* Progress Bar */}
       <div className="w-full bg-gray-100 rounded-full h-3 mb-2">
-        <div className="h-3 rounded-full transition-all" style={{ width: `${progress}%`, background: `linear-gradient(90deg, rgba(59,130,246,1), rgba(16,185,129,1))` }} />
+        <div
+          className="h-3 rounded-full transition-all"
+          style={{ width: `${progress}%`, background: `linear-gradient(90deg, rgba(59,130,246,1), rgba(16,185,129,1))` }}
+        />
       </div>
-      <div className="text-xs text-gray-600 mb-6">{completedCount}/{ALL_TASKS.length} tasks</div>
+      <div className="text-xs text-gray-600 mb-6">
+        {completedCount}/{ALL_TASKS.length} tasks
+      </div>
 
       {/* Categories */}
       <div className="space-y-6">
@@ -121,7 +91,9 @@ export default function Page() {
                         <p className="text-sm text-gray-600 mt-1">{t.evidence}</p>
                       </div>
                       <button
-                        className={`px-3 py-1.5 text-sm rounded-full font-medium border transition ${done ? "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-100" : "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"}`}
+                        className={`px-3 py-1.5 text-sm rounded-full font-medium border transition ${
+                          done ? "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-100" : "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                        }`}
                         onClick={() => toggleTask(t.id)}
                         aria-pressed={done}
                       >
@@ -134,12 +106,6 @@ export default function Page() {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Dev helpers */}
-      <div className="mt-8 flex gap-3">
-        <button className="text-xs text-gray-600 underline" onClick={() => setCompleted([])}>Reset (dev)</button>
-        <button className="text-xs text-gray-600 underline" onClick={() => setCompleted(CATEGORIES.flatMap(cat => grouped[cat].map(t => t.id)))}>Complete all (dev)</button>
       </div>
     </div>
   );
