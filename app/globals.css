@@ -1,4 +1,24 @@
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0b0f12;
+  --card: #12171a;
+  --muted: #7b8b9a;
 }
+
+html, body { height: 100%; }
+body { background: var(--bg); color: #fff; -webkit-font-smoothing: antialiased; }
+
+.container { @apply mx-auto max-w-6xl px-4; }
+.card { @apply bg-[var(--card)] rounded-2xl shadow border border-white/5; }
+.btn { @apply inline-flex items-center justify-center rounded-2xl px-4 py-2 font-medium transition; }
+.btn-primary { @apply btn bg-white text-black hover:bg-white/90; }
+.btn-ghost { @apply btn bg-white/5 text-white hover:bg-white/10; }
+.badge { @apply inline-flex items-center rounded-full px-3 py-1 text-sm bg-white/10; }
+
+.h1 { @apply text-3xl md:text-5xl font-semibold tracking-tight; }
+.h2 { @apply text-2xl md:text-3xl font-semibold; }
+.h3 { @apply text-xl font-semibold; }
+.muted { @apply text-[var(--muted)]; }
