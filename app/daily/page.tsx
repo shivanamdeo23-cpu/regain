@@ -1,5 +1,8 @@
 'use client';
 
+export const dynamic = 'force-dynamic'; // avoid build-time prerender for this page
+// export const revalidate = 0; // (optional) also ensures no caching
+
 import React, { useEffect, useMemo, useState } from 'react';
 
 // ===== Config =====
@@ -18,25 +21,38 @@ const WEEKLY_GOALS = [
   { key: 'calcium', target: 7, label: 'Calcium days' },
 ];
 
-// ===== Storage helpers =====
+// ===== Safe helpers (SSR-proof) =====
+const isBrowser = typeof window !== 'undefined';
+
 const isoDay = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
 const STORAGE_PREFIX = 'bonehub:day:';
 const kDay = (dateStr: string) => `${STORAGE_PREFIX}${dateStr}`;
 
-type DayState = {
-  date: string;
-  tasks: Record<string, boolean>;
-};
+type DayState = { date: string; tasks: Record<string, boolean> };
+
+const emptyDay = (dateStr: string): DayState => ({
+  date: dateStr,
+  tasks: Object.fromEntries(TASKS.map(t => [t.key, false])),
+});
 
 const loadDay = (dateStr: string): DayState | null => {
-  const raw = localStorage.getItem(kDay(dateStr));
-  if (!raw) return null;
-  try { return JSON.parse(raw) as DayState; } catch { return null; }
+  if (!isBrowser) return null;
+  try {
+    const raw = localStorage.getItem(kDay(dateStr));
+    return raw ? (JSON.parse(raw) as DayState) : null;
+  } catch {
+    return null;
+  }
 };
-const saveDay = (state: DayState) =>
-  localStorage.setItem(kDay(state.date), JSON.stringify(state));
+
+const saveDay = (state: DayState) => {
+  if (!isBrowser) return;
+  try {
+    localStorage.setItem(kDay(state.date), JSON.stringify(state));
+  } catch {}
+};
 
 const dateOffset = (baseISO: string, days: number) => {
   const d = new Date(baseISO + 'T00:00:00');
@@ -88,22 +104,34 @@ const PaywallTeaser = () => (
 // ===== Page =====
 export default function DailyPage() {
   const today = isoDay();
-  const [day, setDay] = useState<DayState>(() =>
-    loadDay(today) ?? { date: today, tasks: Object.fromEntries(TASKS.map(t => [t.key, false])) }
-  );
 
-  // Persist on change
-  useEffect(() => { saveDay(day); }, [day]);
+  // IMPORTANT: initialize without touching localStorage (SSR-safe)
+  const [day, setDay] = useState<DayState>(emptyDay(today));
+  const [hydrated, setHydrated] = useState(false);
 
-  // Derived XP (idempotent: only true counts)
+  // On client, hydrate from localStorage once
+  useEffect(() => {
+    if (!isBrowser) return;
+    const stored = loadDay(today);
+    if (stored) setDay(stored);
+    setHydrated(true);
+  }, [today]);
+
+  // Persist whenever state changes (client only)
+  useEffect(() => {
+    if (!isBrowser) return;
+    saveDay(day);
+  }, [day]);
+
+  // Derived values (safe either way)
   const xp = useMemo(
     () => TASKS.reduce((sum, t) => sum + (day.tasks[t.key] ? t.xp : 0), 0),
     [day]
   );
 
-  // Weekly aggregation (rolling last 7 days incl. today)
   const weeklyCounts = useMemo(() => {
     const counts: Record<string, number> = Object.fromEntries(TASKS.map(t => [t.key, 0]));
+    // last 7 days incl. today
     for (let i = 0; i < 7; i++) {
       const dISO = dateOffset(day.date, -i);
       const ds = loadDay(dISO);
@@ -111,9 +139,8 @@ export default function DailyPage() {
       TASKS.forEach(t => { if (ds.tasks?.[t.key]) counts[t.key] += 1; });
     }
     return counts;
-  }, [day]);
+  }, [day.date, hydrated]); // recalc after hydration
 
-  // Simple streak (consecutive days with >=1 task done)
   const streak = useMemo(() => {
     let s = 0;
     for (let i = 0; i < 365; i++) {
@@ -124,9 +151,11 @@ export default function DailyPage() {
       if (anyDone) s += 1; else break;
     }
     return s;
-  }, [day]);
+  }, [day.date, hydrated]);
 
-  const pretty = new Date(day.date).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+  const pretty = new Date(day.date).toLocaleDateString(undefined, {
+    weekday: 'long', month: 'short', day: 'numeric'
+  });
 
   const setTask = (key: string, done: boolean) =>
     setDay(prev => ({ ...prev, tasks: { ...prev.tasks, [key]: done } }));
@@ -161,7 +190,7 @@ export default function DailyPage() {
         </div>
       </header>
 
-      {/* Today's Tasks */}
+      {/* Tasks */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Today’s Tasks</h2>
         {TASKS.map(t => {
@@ -218,10 +247,9 @@ export default function DailyPage() {
         </div>
       </section>
 
-      {/* Paywalled Leaderboard Teaser */}
+      {/* Paywalled Leaderboard */}
       <PaywallTeaser />
 
-      {/* Footer nav (optional quick links) */}
       <nav className="flex justify-center gap-3 text-sm text-gray-600">
         <a className="underline" href="/tasks">All tasks</a>
         <span>·</span>
