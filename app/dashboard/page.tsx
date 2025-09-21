@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import React from 'react';
 
 const habits = [
@@ -11,13 +12,14 @@ const habits = [
 ];
 
 export default function Dashboard() {
+  const router = useRouter();
   const [completed, setCompleted] = useState<boolean[]>(Array(habits.length).fill(false));
   const [xp, setXp] = useState(0);
   const [streak, setStreak] = useState(0);
   const [message, setMessage] = useState("");
   const [profile, setProfile] = useState<{ name?: string; age?: string; condition?: string }>({});
 
-  // Load profile + saved progress
+  // Load profile + progress
   useEffect(() => {
     const savedProfile = localStorage.getItem("profile");
     if (savedProfile) setProfile(JSON.parse(savedProfile));
@@ -36,7 +38,6 @@ export default function Dashboard() {
       setMessage(habits[i].fact);
       localStorage.setItem("xp", String(newXP));
 
-      // Save weekly challenge progress
       updateChallengeProgress(habits[i].key);
     }
     newCompleted[i] = !newCompleted[i];
@@ -61,18 +62,19 @@ export default function Dashboard() {
 
   return (
     <main style={styles.page}>
-      {/* Personalised greeting */}
-      {profile.name ? (
-        <section style={styles.greetingBox}>
+      {/* Profile Section */}
+      {profile.name && (
+        <section style={styles.profileBox}>
           <h1>Welcome back, {profile.name} 👋</h1>
-          <p>Age: {profile.age}</p>
-          <p>Focus: {profile.condition}</p>
+          <p><strong>Age:</strong> {profile.age}</p>
+          <p><strong>Focus:</strong> {profile.condition}</p>
           <p style={styles.encourage}>
-            Let's keep your bones strong today!
+            Let’s keep your bones strong today!
           </p>
+          <button style={styles.editButton} onClick={() => router.push('/profile')}>
+            Edit Profile
+          </button>
         </section>
-      ) : (
-        <h1 style={styles.title}>Dashboard</h1>
       )}
 
       {/* XP + Streak */}
@@ -139,20 +141,31 @@ const styles: { [key: string]: React.CSSProperties } = {
     minHeight: "100vh",
     fontSize: "1.2rem",
   },
-  title: { fontSize: "2rem", marginBottom: "1.5rem" },
-  greetingBox: {
+  profileBox: {
     background: "#fff",
     padding: "1.5rem",
     borderRadius: "12px",
     border: "2px solid #ddd",
     marginBottom: "2rem",
     textAlign: "center",
+    maxWidth: "500px",
+    width: "100%",
   },
   encourage: {
     marginTop: "1rem",
     fontSize: "1.2rem",
     fontWeight: "bold",
     color: "#2d6a2d",
+  },
+  editButton: {
+    marginTop: "1rem",
+    padding: "0.6rem 1.2rem",
+    borderRadius: "8px",
+    border: "none",
+    background: "#0070f3",
+    color: "#fff",
+    cursor: "pointer",
+    fontSize: "1rem",
   },
   subtitle: { fontSize: "1.5rem", marginTop: "2rem", marginBottom: "1rem" },
   list: { listStyle: "none", padding: 0 },
