@@ -1,3 +1,5 @@
+"use client";
+
 // File: components/DailyTasks.tsx
 // Drop-in MVP for daily tasks with: categories, evidence blurbs, 1x-per-day cap,
 // daily reset, progress bar, and streak counter. Next.js/React + Tailwind.
