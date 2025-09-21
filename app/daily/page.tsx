@@ -1,12 +1,11 @@
 "use client";
 
-// app/daily/page.tsx — Daily Tasks (toggle version)
-// - Tasks grouped by category
-// - Evidence blurbs
+// app/daily/page.tsx — Daily Tasks (toggle + dedupe fix)
 // - Toggle on/off per task (XP/progress go up/down)
+// - DEDUPES completed[] on load and on every write (prevents ghost XP)
 // - Daily reset at local midnight
 // - Streak increments only at day rollover if ALL tasks were done yesterday
-// Tailwind CSS styles
+// - Tailwind CSS styles
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -50,21 +49,29 @@ function todayLocal(): string {
   const tzAdjusted = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
   return fmtDate(tzAdjusted);
 }
+function dedupe(arr: string[]): string[] {
+  return Array.from(new Set(arr));
+}
 function loadState(): { date: string; completed: string[] } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { date: todayLocal(), completed: [] };
     const parsed = JSON.parse(raw);
-    if (!parsed.date || !Array.isArray(parsed.completed)) {
-      return { date: todayLocal(), completed: [] };
-    }
-    return parsed;
+    const date = typeof parsed?.date === "string" ? parsed.date : todayLocal();
+    const list = Array.isArray(parsed?.completed) ? parsed.completed : [];
+    // ✅ DEDUPE on load
+    const unique = dedupe(list);
+    // Write-back normalized shape to avoid future drift
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ date, completed: unique }));
+    return { date, completed: unique };
   } catch {
     return { date: todayLocal(), completed: [] };
   }
 }
 function saveState(state: { date: string; completed: string[] }) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // ✅ DEDUPE on every write
+  const next = { date: state.date, completed: dedupe(state.completed) };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
 }
 function loadStreak(): { lastDate: string | null; streak: number } {
   try {
@@ -138,20 +145,20 @@ export default function Page() {
   const completedCount = state ? state.completed.length : 0;
   const progress = total ? Math.round((completedCount / total) * 100) : 0;
 
-  // Toggle on/off a task (idempotent)
+  // Toggle on/off a task — ALWAYS dedupes the list
   function toggleTask(taskId: string) {
     if (!state) return;
     const isDone = state.completed.includes(taskId);
-    const next = {
-      ...state,
-      completed: isDone
-        ? state.completed.filter((id) => id !== taskId) // remove → XP down
-        : [...state.completed, taskId], // add → XP up
-    };
 
+    // Remove all occurrences if present; otherwise add once
+    const nextCompleted = isDone
+      ? state.completed.filter((id) => id !== taskId)
+      : [...state.completed, taskId];
+
+    const next = { ...state, completed: dedupe(nextCompleted) };
     saveState(next);
     setState(next);
-    // Streak is handled only at day rollover in the effect above.
+    // Streak handled only on rollover
   }
 
   if (!state || streak === null) {
