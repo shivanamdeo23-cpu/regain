@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </header>
         <main className="container py-8">{children}</main>
         <footer className="container py-12 text-sm text-white/60">
-          Built with ❤️ for stronger bones.
+          Built with a passion to improve bone health for all. 
         </footer>
       </body>
     </html>
