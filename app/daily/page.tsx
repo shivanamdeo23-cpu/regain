@@ -1,119 +1,20 @@
 "use client";
 
-// Safe Mode: no localStorage. Pure React state so you can confirm
-// that toggling DEcreases progress. If THIS works, the issue is storage.
+// app/daily/page.tsx — FINAL (Simple, toggle, derived XP, no localStorage)
+// This version avoids storage entirely so progress ALWAYS goes up/down on toggle.
+// Once confirmed working, we can add persistence back.
 
 import { useMemo, useState } from "react";
 
 type Task = {
   id: string;
   label: string;
+  evidence: string;
   category: "Nutrition" | "Exercise" | "Lifestyle";
 };
 
 type TasksByCategory = Record<Task["category"], Task[]>;
 
-const ALL_TASKS: Task[] = [
-  { id: "calcium", label: "Take calcium", category: "Nutrition" },
-  { id: "vitD", label: "Vitamin D", category: "Nutrition" },
-  { id: "walk10", label: "10–20 min walk", category: "Exercise" },
-  { id: "resistance", label: "5–10 min resistance", category: "Exercise" },
-  { id: "balance", label: "3 min balance", category: "Exercise" },
-  { id: "sleep", label: "7–8 h sleep", category: "Lifestyle" },
-];
-
-const POINTS_PER_TASK = 10;
-
-function groupTasks(tasks: Task[]): TasksByCategory {
-  return tasks.reduce((acc, t) => {
-    (acc[t.category] ||= []).push(t);
-    return acc;
-  }, {} as TasksByCategory);
-}
-
-export default function Page() {
-  const [completed, setCompleted] = useState<string[]>([]);
-  const grouped = useMemo(() => groupTasks(ALL_TASKS), []);
-
-  const completedCount = completed.length;
-  const xp = completedCount * POINTS_PER_TASK;
-  const maxXp = ALL_TASKS.length * POINTS_PER_TASK;
-  const progress = Math.round((xp / maxXp) * 100);
-
-  function toggleTask(id: string) {
-    setCompleted((prev) => {
-      const has = prev.includes(id);
-      const next = has ? prev.filter((x) => x !== id) : [...prev, id];
-      console.log("completed:", next, "xp:", next.length * POINTS_PER_TASK, "progress:", Math.round((next.length * POINTS_PER_TASK) / maxXp * 100));
-      return next;
-    });
-  }
-
-  return (
-    <div className="max-w-3xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-semibold">Daily Tasks — Safe Mode</h1>
-
-      <div className="w-full bg-gray-100 rounded-full h-3">
-        <div className="h-3 rounded-full transition-all" style={{ width: `${progress}%` }} />
-      </div>
-      <div className="text-sm text-gray-600">XP: {xp}/{maxXp} · {completedCount}/{ALL_TASKS.length} tasks</div>
-
-      {Object.entries(grouped).map(([cat, items]) => (
-        <div key={cat}>
-          <h2 className="text-lg font-medium mb-2">{cat}</h2>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {items.map((t) => {
-              const done = completed.includes(t.id);
-              return (
-                <div key={t.id} className={`p-4 rounded-2xl border ${done ? "bg-green-50 border-green-200" : "bg-white border-gray-200"}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="font-medium">{t.label}</div>
-                    <button
-                      className={`px-3 py-1.5 text-sm rounded-full font-medium border ${done ? "bg-gray-100" : "bg-blue-50"}`}
-                      onClick={() => toggleTask(t.id)}
-                    >
-                      {done ? "Undo" : "Mark done"}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-
-      <button
-        className="text-xs text-gray-600 underline"
-        onClick={() => setCompleted([])}
-      >
-        Reset (dev)
-      </button>
-    </div>
-  );
-}
-
-
-"use client";
-
-// app/daily/page.tsx — Daily Tasks (toggle + derived XP)
-// - Toggle on/off per task (Undo supported)
-// - XP & progress are FULLY DERIVED from completed[] (never stored/incremented)
-// - Dedupe on load and every save to prevent ghost entries
-// - Daily reset at local midnight; streak updates on rollover if all tasks were done
-// - Tailwind CSS styles
-
-import { useEffect, useMemo, useState } from "react";
-
-// Types
- type Task = {
-  id: string;
-  label: string;
-  evidence: string;
-  category: "Nutrition" | "Exercise" | "Lifestyle";
-};
- type TasksByCategory = Record<Task["category"], Task[]>;
-
-// Config: tasks (hardcoded MVP)
 const ALL_TASKS: Task[] = [
   // Nutrition
   { id: "calcium", label: "Take calcium (diet or supplement)", category: "Nutrition", evidence: "Adequate calcium intake supports bone mineral density." },
@@ -131,154 +32,42 @@ const ALL_TASKS: Task[] = [
   { id: "sleep", label: "Aim 7–8 h sleep", category: "Lifestyle", evidence: "Sleep is linked to hormone balance and recovery." },
   { id: "alcohol", label: "Keep alcohol ≤ 1 unit (or none)", category: "Lifestyle", evidence: "Lower alcohol is associated with better bone health." },
 ];
+
 const CATEGORIES: Task["category"][] = ["Nutrition", "Exercise", "Lifestyle"];
+const POINTS_PER_TASK = 10; // adjust freely
 
-// XP config
-const POINTS_PER_TASK = 10; // adjust freely; progress scales with this
-
-// Storage keys
-const STORAGE_KEY = "dailyTasks_state_v1"; // { date: "YYYY-MM-DD", completed: string[] }
-const STREAK_KEY = "dailyTasks_streak_v1"; // { lastDate: string|null, streak: number }
-
-// Helpers
-const fmtDate = (d: Date) => d.toISOString().slice(0, 10);
-function todayLocal(): string {
-  const now = new Date();
-  const tzAdjusted = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-  return fmtDate(tzAdjusted);
-}
-function dedupe(arr: string[]): string[] { return Array.from(new Set(arr)); }
-function loadState(): { date: string; completed: string[] } {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { date: todayLocal(), completed: [] };
-    const parsed = JSON.parse(raw);
-    const date = typeof parsed?.date === "string" ? parsed.date : todayLocal();
-    const list = Array.isArray(parsed?.completed) ? parsed.completed : [];
-    const unique = dedupe(list);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ date, completed: unique }));
-    return { date, completed: unique };
-  } catch {
-    return { date: todayLocal(), completed: [] };
-  }
-}
-function saveState(state: { date: string; completed: string[] }) {
-  const next = { date: state.date, completed: dedupe(state.completed) };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-}
-function loadStreak(): { lastDate: string | null; streak: number } {
-  try {
-    const raw = localStorage.getItem(STREAK_KEY);
-    if (!raw) return { lastDate: null, streak: 0 };
-    const parsed = JSON.parse(raw);
-    return { lastDate: parsed.lastDate ?? null, streak: Number(parsed.streak) || 0 };
-  } catch {
-    return { lastDate: null, streak: 0 };
-  }
-}
-function saveStreak(s: { lastDate: string | null; streak: number }) { localStorage.setItem(STREAK_KEY, JSON.stringify(s)); }
 function groupTasks(tasks: Task[]): TasksByCategory {
-  return tasks.reduce((acc, t) => { (acc[t.category] ||= []).push(t); return acc; }, {} as TasksByCategory);
-}
-function daysBetweenISO(a: string, b: string): number {
-  const da = new Date(a + "T00:00:00");
-  const db = new Date(b + "T00:00:00");
-  return Math.round((+db - +da) / 86400000);
+  return tasks.reduce((acc, t) => {
+    (acc[t.category] ||= []).push(t);
+    return acc;
+  }, {} as TasksByCategory);
 }
 
-// Component
 export default function Page() {
-  const [state, setState] = useState<{ date: string; completed: string[] } | null>(null);
-  const [streak, setStreak] = useState<{ lastDate: string | null; streak: number } | null>(null);
-
-  // Init + daily rollover / streak
-  useEffect(() => {
-    // Clean up any legacy XP keys if you had them
-    localStorage.removeItem("xp");
-    localStorage.removeItem("totalXp");
-
-    const t = todayLocal();
-    const s = loadState();
-    if (s.date !== t) {
-      // Assess yesterday for streak
-      const prevCompleted = s.completed;
-      const prevDate = s.date;
-      const allDoneYesterday = prevCompleted.length === ALL_TASKS.length;
-      const streakObj = loadStreak();
-
-      if (allDoneYesterday) {
-        if (streakObj.lastDate) {
-          const gap = daysBetweenISO(streakObj.lastDate, prevDate);
-          const continued = gap === 1 || gap === 0;
-          saveStreak({ lastDate: prevDate, streak: continued ? streakObj.streak + 1 : 1 });
-        } else {
-          saveStreak({ lastDate: prevDate, streak: 1 });
-        }
-      } else {
-        if (streakObj.lastDate) {
-          const gap = daysBetweenISO(streakObj.lastDate, t);
-          if (gap >= 1) saveStreak({ lastDate: streakObj.lastDate, streak: 0 });
-        }
-      }
-
-      const fresh = { date: t, completed: [] };
-      saveState(fresh);
-      setState(fresh);
-      setStreak(loadStreak());
-    } else {
-      setState(s);
-      setStreak(loadStreak());
-    }
-  }, []);
-
-  // Derived (pure) — XP/progress are computed from completed[], never stored
+  const [completed, setCompleted] = useState<string[]>([]);
   const grouped = useMemo(() => groupTasks(ALL_TASKS), []);
-  const totalTasks = ALL_TASKS.length;
-  const completedCount = state ? state.completed.length : 0;
-  const xp = completedCount * POINTS_PER_TASK;
-  const maxXp = totalTasks * POINTS_PER_TASK;
-  const progress = maxXp ? Math.round((xp / maxXp) * 100) : 0;
 
-  // Toggle on/off a task — ALWAYS dedupes the list
-  function toggleTask(taskId: string) {
-    if (!state) return;
-    const isDone = state.completed.includes(taskId);
-    const nextCompleted = isDone
-      ? state.completed.filter((id) => id !== taskId) // remove → XP down
-      : [...state.completed, taskId];                 // add → XP up
+  const completedCount = completed.length;
+  const xp = completedCount * POINTS_PER_TASK;           // derived, not stored
+  const maxXp = ALL_TASKS.length * POINTS_PER_TASK;
+  const progress = Math.round((xp / maxXp) * 100);
 
-    const next = { ...state, completed: dedupe(nextCompleted) };
-    saveState(next);
-    setState(next);
-    // Streak handled only on rollover
-  }
-
-  if (!state || streak === null) {
-    return (
-      <div className="p-6 animate-pulse">
-        <div className="h-6 w-40 bg-gray-200 rounded mb-4" />
-        <div className="h-3 w-full bg-gray-200 rounded" />
-      </div>
-    );
+  function toggleTask(id: string) {
+    setCompleted((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
   return (
     <div className="max-w-3xl mx-auto p-6">
-      {/* Header + Streak */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold">Daily Bone Health Tasks</h1>
-        <StreakBadge streak={streak.streak} />
+        <div className="text-sm text-gray-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">XP: {xp}/{maxXp}</div>
       </div>
 
-      {/* Progress / XP */}
+      {/* Progress Bar */}
       <div className="w-full bg-gray-100 rounded-full h-3 mb-2">
-        <div
-          className="h-3 rounded-full transition-all"
-          style={{ width: `${progress}%`, background: `linear-gradient(90deg, rgba(59,130,246,1), rgba(16,185,129,1))` }}
-          aria-label={`Progress ${progress}%`}
-        />
+        <div className="h-3 rounded-full transition-all" style={{ width: `${progress}%`, background: `linear-gradient(90deg, rgba(59,130,246,1), rgba(16,185,129,1))` }} />
       </div>
-      <div className="text-xs text-gray-600 mb-6">XP: {xp}/{maxXp} • {completedCount}/{totalTasks} tasks</div>
+      <div className="text-xs text-gray-600 mb-6">{completedCount}/{ALL_TASKS.length} tasks</div>
 
       {/* Categories */}
       <div className="space-y-6">
@@ -287,7 +76,7 @@ export default function Page() {
             <h2 className="text-lg font-medium mb-3">{cat}</h2>
             <div className="grid sm:grid-cols-2 gap-3">
               {grouped[cat]?.map((t) => {
-                const done = state.completed.includes(t.id);
+                const done = completed.includes(t.id);
                 return (
                   <div key={t.id} className={`p-4 rounded-2xl border ${done ? "bg-green-50 border-green-200" : "bg-white border-gray-200"}`}>
                     <div className="flex items-start justify-between gap-3">
@@ -311,19 +100,11 @@ export default function Page() {
         ))}
       </div>
 
-      {/* Reset note */}
-      <p className="text-xs text-gray-500 mt-8">Tasks reset daily at local midnight. Streaks update the next day if you completed all tasks yesterday.</p>
-    </div>
-  );
-}
-
-function StreakBadge({ streak }: { streak: number }) {
-  return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-        <path d="M12 2c1.657 0 3 1.343 3 3v1h1a3 3 0 0 1 2.995 2.824L19 9v2a5 5 0 0 1-5 5h-1v2h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-2H10a5 5 0 0 1-4.995-4.783L5 11V9a3 3 0 0 1 3-3h1V5c0-1.657 1.343-3 3-3z" />
-      </svg>
-      <span className="text-sm font-medium">Streak: {streak} day{streak === 1 ? "" : "s"}</span>
+      {/* Dev helpers */}
+      <div className="mt-8 flex gap-3">
+        <button className="text-xs text-gray-600 underline" onClick={() => setCompleted([])}>Reset (dev)</button>
+        <button className="text-xs text-gray-600 underline" onClick={() => setCompleted(CATEGORIES.flatMap(cat => grouped[cat].map(t => t.id)))}>Complete all (dev)</button>
+      </div>
     </div>
   );
 }
