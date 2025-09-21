@@ -1,18 +1,11 @@
-import type { Config } from 'tailwindcss';
-
-const config: Config = {
+/** @type {import('tailwindcss').Config} */
+module.exports = {
   content: [
-    './app/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
-    './lib/**/*.{ts,tsx}',
-    './store/**/*.{ts,tsx}',
+    "./app/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}"
   ],
   theme: {
-    extend: {
-      borderRadius: { '2xl': '1rem' },
-      boxShadow: { soft: '0 6px 20px rgba(0,0,0,0.08)' },
-    },
+    extend: {}
   },
-  plugins: [],
+  plugins: []
 };
-export default config;
