@@ -1,6 +1,7 @@
 'use client';
-import HabitCard from '@/components/HabitCard';
-import { useXP } from '@/store/xp';
+import HabitCard from '../components/HabitCard';
+import { useXP } from '../../store/xp';
+
 
 export default function Dashboard() {
   const { habits, xp, streak } = useXP();
