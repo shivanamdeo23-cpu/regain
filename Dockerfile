@@ -1,35 +1,33 @@
-# --- Build stage ---
+# Use official Node.js LTS on Alpine
 FROM node:20-alpine AS build
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+
+# Create app directory
 WORKDIR /app
 
-# Install deps
+# Copy package.json and optionally package-lock.json (ignore if missing)
 COPY package*.json ./
-RUN npm ci
 
-# Copy source and build
+# Install dependencies (omit dev for smaller image)
+RUN npm install --omit=dev
+
+# Copy source
 COPY . .
+
+# Build Next.js
 RUN npm run build
 
-# --- Runtime stage ---
-FROM node:20-alpine AS runtime
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+# Production image
+FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Install only production deps
+# Copy only necessary output
 COPY --from=build /app/package*.json ./
-RUN npm ci --omit=dev
-
-# Copy compiled app + assets
+COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
-COPY --from=build /app/next.config.js ./next.config.js
 
-# If your app needs it, ensure PORT is 3000 (Sherpa often expects this)
-ENV PORT=3000
+# Expose the port Next.js runs on
 EXPOSE 3000
 
-# Start the app
-CMD ["npm", "run", "start"]
+# Run Next.js in production
+CMD ["npm", "start"]
