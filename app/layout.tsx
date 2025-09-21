@@ -1,5 +1,5 @@
 import "../styles/globals.css";
-import { I18nProvider } from "./i18n/context";
+import { TranslationProvider } from "./providers/TranslationProvider";
 
 export const metadata = {
   title: "ReGain",
@@ -10,9 +10,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <I18nProvider>
+        <TranslationProvider>
           <main className="app-shell">{children}</main>
-        </I18nProvider>
+        </TranslationProvider>
       </body>
     </html>
   );
