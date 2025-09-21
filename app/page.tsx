@@ -17,15 +17,15 @@ export default function Home() {
       <section style={styles.infoBox}>
         <h2 style={styles.sectionTitle}>Why ReGain?</h2>
         <ul style={styles.list}>
-          <li>🦴 Keep bones strong with daily calcium & vitamin D.</li>
-          <li>🚶 Walking & balance exercises reduce fall risk by 30%.</li>
-          <li>☀️ Sunlight boosts vitamin D for healthy bones.</li>
-          <li>👨‍👩‍👧 Family can track and cheer you on (premium).</li>
+          <li>Keep bones strong with daily calcium & vitamin D.</li>
+          <li>Walking and balance exercises reduce fall risk by 30%.</li>
+          <li>Sunlight improves vitamin D absorption.</li>
+          <li>Family can track and support your progress (premium).</li>
         </ul>
       </section>
 
       <button style={styles.button} onClick={() => router.push('/dashboard')}>
-        ➡️ Create Profile / Log In
+        Create Profile / Log In
       </button>
 
       <p style={styles.note}>
@@ -34,10 +34,10 @@ export default function Home() {
 
       <section style={styles.footerBox}>
         <h3 style={styles.sectionTitle}>How it works</h3>
-        <p>✅ Track habits daily</p>
-        <p>🏅 Earn XP & badges</p>
-        <p>🔥 Build streaks</p>
-        <p>👨‍👩‍👧 Share progress with family</p>
+        <p>Track your habits daily.</p>
+        <p>Earn points and unlock badges.</p>
+        <p>Build healthy streaks.</p>
+        <p>Share your progress with family.</p>
       </section>
     </main>
   );
