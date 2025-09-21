@@ -64,4 +64,24 @@ return (
 </div>
 
 
+{!isPremium && (
+<div className="card p-5">
+<div className="h3 mb-1">Premium insights</div>
+<p className="muted">Upgrade to see weekly adherence %, best/worst days, task breakdowns, and smart suggestions.</p>
+</div>
+)}
+
+
+{isPremium && (
+<div className="card p-5 space-y-2">
+<div className="h3">Insights</div>
+<ul className="list-disc pl-5 text-white/90">
+<li>Weekly adherence: {/* simple placeholder */} {(Array.from(byDate.values()).filter(v=>v>0).length / Math.max(1, byDate.size) * 100).toFixed(0)}%</li>
+<li>Most consistent weekday: {/* naive */} computed from completions in future iteration</li>
+<li>Top tasks: coming soon</li>
+</ul>
+</div>
+)}
+</div>
+);
 }
